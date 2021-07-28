@@ -1,0 +1,15 @@
+Feature: Retrieve user active Support information; Service  is UP and RUNNING - GET /api/v1/{userId}/claims/{claimId}/supports/active
+  
+  		Actor:Anna is existing ACC client who has requested for support
+
+  @css @support @smoke @regression
+  Scenario Outline: Retrieve list of active support
+    Given Anna is ACC client "<userId>" who want to get the list of her active support for "<claimId>"
+    When Anna get list of active support list
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" active support
+    And Anna active support list is correct
+
+    Examples: Anna checking on User contact service
+      | userId   | claimId     | statuscode | statusmessage |
+      | 17118411 | 10039549514 |        200 |               |
+      | Z11111   | 10039549514 |        401 |               |

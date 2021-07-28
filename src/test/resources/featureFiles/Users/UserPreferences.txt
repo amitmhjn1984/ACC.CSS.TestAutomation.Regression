@@ -1,0 +1,23 @@
+Feature: Check user perferences is retrieve and update servie is UP and RUNNING - GET /api/v1/users/{userId}/preferences
+  			PUT /api/v1/users/{userId}/preferences
+
+  @css @users @regression @smoke
+  Scenario Outline: Updating the user preferences information
+    Given Anna is ACC user with existing preferences
+    And Anna get preferences information
+    When Anna update ACC preferences "<email>" "<preferenceType>" "<otherPreferences>" "<sms>" information
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for preferences
+    And Anna is able to view updated preferences information
+
+    Examples: Anna checking on User preferences service
+      | email | preferenceType | otherPreferences | sms   | statuscode | statusmessage              |
+      | true  | GENERAL        | string           | true  |        200 | preference details updated |
+      | true  | GENERAL        | string           | false |        200 | preference details updated |
+      | false | GENERAL        | string           | true  |        200 | preference details updated |
+      | true  | SUPPORT_CLAIM  | string           | true  |        200 | preference details updated |
+      | false | SUPPORT_CLAIM  | string           | true  |        200 | preference details updated |
+      | true  | GENERAL        |                  | false |        200 | preference details updated |
+      | false | GENERAL        | string           | false |        200 | preference details updated |
+      | Test  | GENERAL        | string           | false |        400 | Can not deserialize value  |
+      | false | Test           | string           | false |        400 | Can not deserialize value  |
+      | false | GENERAL        | string           | test  |        400 | Can not deserialize value  |

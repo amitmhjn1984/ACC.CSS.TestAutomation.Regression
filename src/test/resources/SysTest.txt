@@ -1,0 +1,9 @@
+testEnvironment=SysTest
+
+#TEST
+url=https://client-int-test.apps-test.ds.acc.co.nz/
+#url=https://myacc-dev/api/search/
+jdbc.url=jdbc:sqlserver://AZU-SYD-PDD-ASQ-002.database.windows.net:1433;databaseName=AZU-SYD-PDD-SDB-CSS021
+db.username=SVC_CSS_OWNER_TEST 
+db.password=5unnyM0nd@y!
+os=windows

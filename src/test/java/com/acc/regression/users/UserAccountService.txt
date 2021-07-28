@@ -1,0 +1,174 @@
+package com.acc.regression.users;
+
+import java.net.URLEncoder;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.restassured.RestAssured;
+import com.jayway.restassured.http.ContentType;
+import com.jayway.restassured.response.Response;
+import com.jayway.restassured.specification.RequestSpecification;
+
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+import org.junit.Assert;
+import static com.jayway.restassured.RestAssured.given;
+import static io.restassured.path.json.JsonPath.from;
+import com.acc.regression.*;
+
+@SuppressWarnings("unchecked")
+public class UserAccountService extends InitializeTest {
+	String endpoint = null;
+	String userId = null;
+	String token= null;
+	JSONObject bankAccounts = new JSONObject();
+	JSONObject weeklyComp = new JSONObject();
+	JSONObject reimbursement = new JSONObject();
+
+	Response getAccountInformationResponse;
+	Response putAccountInformationResponse;
+
+
+	@Given("^Anna is ACC user \"([^\"]*)\" on \"([^\"]*)\" with existing account, test description \"([^\"]*)\"$")
+	public void anna_is_existing_ACC_user_on_with_existing_account_information(String RequestType, String endpoint,
+			String testCaseDescription) throws Throwable {
+		
+		GetUser user = new GetUser();
+		user.selectRandomUser();
+		this.userId = accUser;
+		
+		GetJWT JWT = new GetJWT();
+		token = JWT.getToken(this.userId);
+	}
+
+	@Given("^Anna get accounts information$")
+	public void Anna_get_account_information() throws Throwable {
+
+		this.endpoint = "api/v1/users/" + this.userId + "/accounts";
+		System.out.println(this.endpoint + " --Endpoint");
+
+		getAccountInformationResponse = given().
+											header("X-Authorization", token).
+											relaxedHTTPSValidation().
+											urlEncodingEnabled(false).
+											contentType("application/json").
+										when().
+											get(this.endpoint);
+
+
+		
+		if ((getAccountInformationResponse.statusCode() != 200)
+				|| (getAccountInformationResponse.statusCode() == 404)) {
+			System.out.println("Unable to get the account information for UserId--->" + this.userId);
+			System.out.println("Status Code--->" + getAccountInformationResponse.statusCode());
+		}
+
+		//setAccoutInformation();
+
+	}
+
+	@When("^Anna update ACC account \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" information$")
+	public void anna_update_ACC_account_information(String reimbursementAccountNumber, 
+			String reimbursementBankName, String wcAccountNumber, String wcBankName,
+			String wcIRDNumber, String wcTaxCode) throws Throwable {
+
+		if (!wcAccountNumber.trim().equals(""))
+			weeklyComp.put("accountNumber", wcAccountNumber);
+
+		if (!wcBankName.trim().equals(""))
+			weeklyComp.put("bankName", wcBankName);
+		
+		if (!wcIRDNumber.trim().equals(""))
+			weeklyComp.put("irdNumber", wcIRDNumber);
+
+		if (!wcTaxCode.trim().equals(""))
+			weeklyComp.put("taxCode", wcTaxCode);
+		
+		if (!reimbursementAccountNumber.trim().equals(""))
+			reimbursement.put("accountNumber", reimbursementAccountNumber);
+
+		if (!reimbursementBankName.trim().equals(""))
+			reimbursement.put("bankName", reimbursementBankName);
+
+
+
+		bankAccounts.put("weeklyComp", weeklyComp);
+		bankAccounts.put("reimbursement", reimbursement);
+
+		ObjectMapper mapper = new ObjectMapper();
+		System.out.println("This is the post body");
+		System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(bankAccounts));
+		
+		putAccountInformationResponse = given().
+											header("X-Authorization", token).
+											relaxedHTTPSValidation().
+											urlEncodingEnabled(false).
+											contentType("application/json").
+											body(bankAccounts).
+										when().
+											put(this.endpoint);
+
+		// System.out.println(putAccountInformationResponse.jsonPath().prettyPrint());
+		if (putAccountInformationResponse.statusCode() != 200) {
+			System.out.println("Unable to update the account information Status Code--->"
+					+ putAccountInformationResponse.statusCode());
+
+		}
+	}
+
+	@Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\"$")
+	public void Anna_should_see_the_request_returning_with(int expectedstatuscode, String expectedStatusMessage)
+			throws Throwable {
+
+			System.out.println(
+					"Put Account status message - " + putAccountInformationResponse.body().jsonPath().prettyPrint());
+			
+			
+		Assert.assertTrue("UserAccount Service is Not Running fine",
+				expectedstatuscode == putAccountInformationResponse.statusCode());
+
+		Assert.assertEquals(expectedStatusMessage, putAccountInformationResponse.body().jsonPath().get("message"));
+	}
+
+
+	@Then("^Anna is able to view updated account information$")
+	public void anna_is_able_to_view_updated_account_information() throws Throwable {
+		if (putAccountInformationResponse.statusCode() == 200) {
+			getAccountInformationResponse = given().
+												header("X-Authorization", token).
+												relaxedHTTPSValidation().
+												urlEncodingEnabled(false).
+												contentType("application/json").
+											when().
+												get(this.endpoint);
+
+			Assert.assertEquals(getAccountInformationResponse.jsonPath().get(),
+					putAccountInformationResponse.jsonPath().get("account"));
+		}
+
+	}
+
+	public void setAccoutInformation() throws Throwable {
+		if (getAccountInformationResponse.statusCode() != 404) {
+			String getAccountString = getAccountInformationResponse.asString();
+			JSONParser parser = new JSONParser();
+			this.bankAccounts = (JSONObject) parser.parse(getAccountString);
+		}
+		
+
+
+	}
+
+}

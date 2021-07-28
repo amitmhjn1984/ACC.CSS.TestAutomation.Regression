@@ -1,0 +1,661 @@
+package com.acc.regression.claims;
+
+import static com.jayway.restassured.RestAssured.given;
+
+import java.util.HashMap;
+import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
+import org.junit.Assert;
+import org.junit.ComparisonFailure;
+
+import com.acc.regression.GetJWT;
+import com.acc.regression.InitializeTest;
+import com.jayway.restassured.response.Response;
+
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+
+public class UserClaimsNumber extends InitializeTest {
+
+	String userId;
+	String endpoint;
+	String token;
+
+	Response claimsNumberInformationResponse;
+
+	// When Anna get the claims information for a claim number "<claimNumber>"
+	@When("^Anna get the claims information for a claim number \"([^\"]*)\"$")
+	public void Anna_get_the_claims_information_for_a_claim_Number(String claimNumber) throws Throwable {
+
+		this.userId = accUser;
+
+		GetJWT JWT = new GetJWT();
+		token = JWT.getToken(this.userId);
+
+		// GET /api/v1/{userId}/claims/{claimNumber}
+		this.endpoint = "api/v1/" + this.userId + "/claims/" + claimNumber;
+		System.out.println(this.endpoint + " --Endpoint");
+		claimsNumberInformationResponse = given().
+										  header("X-Authorization", token).
+										  relaxedHTTPSValidation().
+										  urlEncodingEnabled(false).
+										  contentType("application/json").
+										  when().get(this.endpoint);
+		if (claimsNumberInformationResponse.statusCode() != 200) {
+			System.out.println("Unable to GET claims information for claim number : " + claimNumber
+					+ ", Status Code--->" + claimsNumberInformationResponse.statusCode());
+			System.out.println(claimsNumberInformationResponse.asString());
+		}
+	}
+
+	@Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" for claim number$")
+	public void Anna_should_see_the_request_returning_with_for_claim_number(int expectedstatuscode,
+			String expectedStatusMessage) throws Throwable {
+
+		System.out.println(claimsNumberInformationResponse.jsonPath().prettyPrint());
+		System.out.println("Returned Status code for the request - " + claimsNumberInformationResponse.statusCode());
+
+		Assert.assertTrue("UserClaimNumber Service is not Running fine. Expected " 
+		+ expectedstatuscode + " found " + claimsNumberInformationResponse.statusCode(),
+				expectedstatuscode == claimsNumberInformationResponse.statusCode());
+		if (claimsNumberInformationResponse.statusCode() != 200) {
+			Assert.assertTrue("Error message does not match", claimsNumberInformationResponse.body().jsonPath()
+					.get("message").toString().contains(expectedStatusMessage));
+		}
+	}
+
+	// And Anna view correct claims information for caseOwner "<caseOwnerName>"
+	// "<email>" "<managementSite>" "<phone>" "<active>" "<claimId>"
+	@Then("^Anna view correct claims information for caseOwner \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void Anna_view_correct_claims_information_for_caseOwner(String expectedCaseOwnerName, String expectedEmail,
+			String expectedManagementSite, String expectedPhone, String expectedActive, String expectedClaimId) throws Throwable {
+		
+		if (claimsNumberInformationResponse.statusCode() == 200) {
+			String actualCaseOwner = claimsNumberInformationResponse.body().jsonPath().getString("caseOwner.caseOwnerName");
+			String actualEmail = claimsNumberInformationResponse.body().jsonPath().getString("caseOwner.email");
+			String actualManagementSite = claimsNumberInformationResponse.body().jsonPath()
+					.getString("caseOwner.managementSite");
+			String actualPhone = claimsNumberInformationResponse.body().jsonPath().getString("caseOwner.phone");
+			String actualActive = claimsNumberInformationResponse.body().jsonPath().getString("active");
+			String actualClaimId = claimsNumberInformationResponse.body().jsonPath().getString("claimId");
+			String actualUserId = claimsNumberInformationResponse.body().jsonPath().getString("userId");
+
+			if (!expectedCaseOwnerName.equals("")) {
+				Assert.assertEquals(expectedCaseOwnerName, actualCaseOwner);
+			} else {
+				// TODO - is it OK to have an empty caseOwner?
+				// if it is, assume we have a department - what do we need to check there?
+				// Assert.(null, actualCaseOwner);
+			}
+
+			Assert.assertEquals(expectedEmail, actualEmail);
+			Assert.assertEquals(expectedManagementSite, actualManagementSite);
+			Assert.assertEquals(expectedPhone, actualPhone);
+			Assert.assertEquals(expectedActive, actualActive);
+			Assert.assertEquals(expectedClaimId, actualClaimId);
+			Assert.assertEquals(this.userId, actualUserId);
+		}
+		//  else not 200 return code, don't process data
+	}
+
+	// And Anna view correct claims information for vendor "<practiceName>"
+	@Then("^Anna view correct claims information for vendor \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void Anna_view_correct_claims_information_for_vendor(String practiceName, String hpiOrganisationNumber,
+			String hpiFacilityNumber) throws Throwable {
+
+		if (claimsNumberInformationResponse.statusCode() == 200) {
+			if (claimsNumberInformationResponse.jsonPath().getList("vendor") == null) {
+				System.out.println("no vendors");
+			} else {
+				int size = claimsNumberInformationResponse.jsonPath().getList("vendor").size();
+				System.out.println("size is " + size);
+			}
+	
+			String actualPracticeName = claimsNumberInformationResponse.body().jsonPath().getString("vendor.practiceName");
+			String actualHpiOrganisationNumber = claimsNumberInformationResponse.body().jsonPath()
+					.getString("vendor.hpiOrganisationNumber");
+			String actualHpiFacilityNumber = claimsNumberInformationResponse.body().jsonPath()
+					.getString("vendor.hpiFacilityNumber");
+	
+			Assert.assertEquals(practiceName, actualPracticeName);
+			Assert.assertEquals(hpiOrganisationNumber, actualHpiOrganisationNumber);
+			Assert.assertEquals(hpiFacilityNumber, actualHpiFacilityNumber);
+		}
+		//  else not 200 return code, don't process data
+	}
+
+	// And Anna view correct claims information for provider address "<line1>" "<line2>" "<suburb>" "<city>" "<postCode>" "<country>" "<type>"
+	@Then("^Anna view correct claims information for provider address \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void Anna_view_correct_claims_information_for_provider_address(String line1, String line2, String suburb,
+			String city, String postCode, String country, String type) throws Throwable {
+
+		if (claimsNumberInformationResponse.statusCode() == 200) {
+			boolean validData = true;
+			int size = claimsNumberInformationResponse.jsonPath().getList("provider.address").size();
+//			System.out.println("Looking for address (type " + type + ") found " + size + " address types");
+			StringBuilder sbInvalidData = new StringBuilder();
+
+			List<String> actualLine1 = null;
+			List<String> actualLine2 = null;
+			List<String> actualSuburb = null;
+			List<String> actualCity = null;
+			List<String> actualPostCode = null;
+			List<String> actualCountry = null;
+			List<String> actualType = null;
+
+			if (size > 0) {
+				actualLine1 = claimsNumberInformationResponse.jsonPath().getList("provider.address.line1");
+				actualLine2 = claimsNumberInformationResponse.jsonPath().getList("provider.address.line2");
+				actualSuburb = claimsNumberInformationResponse.jsonPath().getList("provider.address.suburb");
+				actualCity = claimsNumberInformationResponse.jsonPath().getList("provider.address.city");
+				actualPostCode = claimsNumberInformationResponse.jsonPath().getList("provider.address.postCode");
+				actualCountry = claimsNumberInformationResponse.jsonPath().getList("provider.address.country");
+				actualType = claimsNumberInformationResponse.jsonPath().getList("provider.address.type");
+
+				boolean foundType = false;
+				
+				for (int i = 0; i < size; i++) {
+					// success matching
+					// first check type/ if thats wrong, we should go to the next one
+					if (type.equals(actualType.get(i))) {
+						foundType = true;
+						System.out.println("\nfound matching type - [" + actualType.get(i) + "], checking other address fields");
+						if (!line1.equals(actualLine1.get(i))){
+							validData = false;
+							sbInvalidData.append("\nfound incorrect line1 ([" + line1 + "] vs [" + actualLine1.get(i) + "]");  
+						}
+						if (!line2.equals(actualLine2.get(i))){
+							validData = false;
+							sbInvalidData.append("\nfound incorrect line2 ([" + line2 + "] vs [" + actualLine2.get(i) + "]");  
+						}
+						if (!suburb.equals(actualSuburb.get(i))){
+							validData = false;
+							sbInvalidData.append("\nfound incorrect suburb ([" + suburb + "] vs [" + actualSuburb.get(i) + "]");  
+						} 
+						if (!city.equals(actualCity.get(i))){
+							validData = false;
+							sbInvalidData.append("\nfound incorrect city ([" + city + "] vs [" + actualCity.get(i) + "]");  
+						}
+						if (!postCode.equals(actualPostCode.get(i))){
+							validData = false;
+							sbInvalidData.append("\nfound incorrect postCode ([" + postCode + "] vs [" + actualPostCode.get(i) + "]");  
+						} 
+						if (!country.equals(actualCountry.get(i))){
+							validData = false;
+							sbInvalidData.append("\nfound incorrect country ([" + country + "] vs [" + actualCountry.get(i) + "]");  
+						}
+						System.out.println("done checking fields - type matches.  valid = " + validData);
+						break;
+					} else {
+//						sbInvalidData.append("\nskipping incorrect type ([" + type + "] vs [" + actualType.get(i) + "]");  
+//						System.out.println("skipping non-matching [" + actualType.get(i) + "] address type");
+					}
+				} // end of for loop
+				// if we didnt find our expected type
+				if (!foundType) {
+					validData = false;
+				}
+				
+			} else {
+				// size was zero
+				System.out.println("no provider address found");
+				validData = false;
+			}
+
+			StringBuilder sbExpectedData = new StringBuilder("Expected (provider address) values\n");
+
+			// if we didnt find it, flag will still be false
+			if (validData) {
+		//		System.out.println("found matching " + type + " address with matching data");
+				// stop looking, we found it
+			} else {
+//				System.out.println("Data Does Not Match.");
+				// if we failed, populate the desired address so we can print it
+				sbExpectedData.append("line1=[").append(line1).append("],line2=[").append(line2).append("],suburb=[").append(suburb)
+						.append("],city=[").append(city).append("],postCode=[").append(postCode).append("],country=[")
+						.append(country).append("],type=[").append(type).append("]");
+			}
+
+			Assert.assertTrue("Unable to match address - looking for: \n" 
+							+ sbExpectedData.toString() + " but found \n" + sbInvalidData.toString(),
+							validData); // print errors if failed flag
+		}
+		//  else not 200 return code, don't process data
+	}
+
+	// And Anna view correct claims information for provider work contact
+	// "<areaCode>" "<countryCode>" "<extension>" "<phoneNumber>" "<emailAddress>"
+	@Then("^Anna view correct claims information for provider work contact \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void Anna_view_correct_claims_information_for_provider_work_contact(String areaCode, String countryCode,
+			String extension, String phoneNumber, String emailAddress) throws Throwable {
+
+		if (claimsNumberInformationResponse.statusCode() == 200) {
+			String actualAreaCode = claimsNumberInformationResponse.body().jsonPath()
+					.getString("provider.contact.work.areaCode");
+			String actualCountryCode = claimsNumberInformationResponse.body().jsonPath()
+					.getString("provider.contact.work.countryCode");
+			String actualExtension = claimsNumberInformationResponse.body().jsonPath()
+					.getString("provider.contact.work.extension");
+			String actualPhoneNumber = claimsNumberInformationResponse.body().jsonPath()
+					.getString("provider.contact.work.phoneNumber");
+			String actualEmailAddress = claimsNumberInformationResponse.body().jsonPath()
+					.getString("provider.contact.emailAddress");
+
+			Assert.assertEquals("Area Code doesnt match " + areaCode + " vs " + actualAreaCode, areaCode, actualAreaCode);
+			Assert.assertEquals("Country doesnt match " + countryCode + " vs " + actualCountryCode, countryCode, actualCountryCode);
+			Assert.assertEquals("Extension match " + extension + " vs " + actualExtension, extension, actualExtension);
+			Assert.assertEquals("Phone Number match " + phoneNumber + " vs " + actualPhoneNumber, phoneNumber, actualPhoneNumber);
+
+			// email is returning null if empty
+			 if (actualEmailAddress == null || "".equals(actualEmailAddress.trim())) {
+				 Assert.assertEquals("", emailAddress, "");
+			 } else {
+				 Assert.assertEquals("Email match " + emailAddress + " vs " + actualEmailAddress, emailAddress, actualEmailAddress);
+			 }
+		}
+		//  else not 200 return code, don't process data
+	}
+
+	// And Anna view correct claims information for provider home contact
+	// "<areaCode>" "<countryCode>" "<extension>" "<phoneNumber>" "<emailAddress>"
+	@Then("^Anna view correct claims information for provider home contact \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void Anna_view_correct_claims_information_for_provider_home_contact(String areaCode, String countryCode,
+			String extension, String expectedPhoneNumber) throws Throwable {
+
+		if (claimsNumberInformationResponse.statusCode() == 200) {
+			
+			boolean hasHome = (claimsNumberInformationResponse.jsonPath().getList("provider.contact.home") != null);
+			
+			if (hasHome) {
+				String actualAreaCode = claimsNumberInformationResponse.body().jsonPath()
+						.getString("provider.contact.home.areaCode");
+				String actualCountryCode = claimsNumberInformationResponse.body().jsonPath()
+						.getString("provider.contact.home.countryCode");
+				String actualExtension = claimsNumberInformationResponse.body().jsonPath()
+						.getString("provider.contact.home.extension");
+				String actualPhoneNumber = claimsNumberInformationResponse.body().jsonPath()
+						.getString("provider.contact.home.phoneNumber");
+
+				Assert.assertEquals("Invalid Area Code", areaCode, actualAreaCode);
+				Assert.assertEquals("Invalid Country", countryCode, actualCountryCode);
+				Assert.assertEquals("Incalid Extension", extension, actualExtension);
+				Assert.assertEquals("Invalid Phone", expectedPhoneNumber, actualPhoneNumber);
+			} else {
+				System.out.println("No provider.contact.home found");
+				// if they didnt expect to have any data then its ok 
+				Assert.assertTrue("No provider.contact.home.AreaCode found but expected ["+areaCode+"]", "".equals(areaCode));
+				Assert.assertTrue("No provider.contact.home.CountryCode but expected ["+countryCode+"]", "".equals(countryCode));
+				Assert.assertTrue("No provider.contact.home.Extension found but expected ["+extension+"]", "".equals(extension));
+				Assert.assertTrue("No provider.contact.home.phone found but expected ["+expectedPhoneNumber+"]", "".equals(expectedPhoneNumber));
+				
+			}
+		}
+		//  else not 200 return code, don't process data
+	}
+
+	//TODO
+	
+	// And Anna view correct claims information for provider mobile contact
+	// "<areaCode>" "<countryCode>" "<extension>" "<phoneNumber>" "<emailAddress>"
+	@Then("^Anna view correct claims information for provider mobile contact \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void Anna_view_correct_claims_information_for_provider_mobile_contact(String areaCode, String countryCode,
+			String extension, String phoneNumber) throws Throwable {
+
+		if (claimsNumberInformationResponse.statusCode() == 200) {
+			if (claimsNumberInformationResponse.jsonPath().getMap("provider.contact.mobile") == null) {
+				// no mobile
+				// check that the test is not looking for something
+				Assert.assertEquals(areaCode, "");
+				Assert.assertEquals(countryCode, "");
+				Assert.assertEquals(extension, "");
+				Assert.assertEquals(phoneNumber, "");
+
+			} else {
+				String actualAreaCode = claimsNumberInformationResponse.body().jsonPath()
+						.getString("provider.contact.mobile.areaCode");
+				String actualCountryCode = claimsNumberInformationResponse.body().jsonPath()
+						.getString("provider.contact.mobile.countryCode");
+				String actualExtension = claimsNumberInformationResponse.body().jsonPath()
+						.getString("provider.contact.mobile.extension");
+				String actualPhoneNumber = claimsNumberInformationResponse.body().jsonPath()
+						.getString("provider.contact.mobile.phoneNumber");
+
+				Assert.assertEquals(areaCode, actualAreaCode);
+				Assert.assertEquals(countryCode, actualCountryCode);
+				Assert.assertEquals(extension, actualExtension);
+				Assert.assertEquals(phoneNumber, actualPhoneNumber);
+			}
+		}
+		//  else not 200 return code, don't process data
+	}
+
+	// And Anna view correct claims information for provider details "<providerId>"
+	// "<firstName>" "<middleName>" "<surname>"
+	@Then("^Anna view correct claims information for provider details \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void Anna_view_correct_claims_information_for_provider_details(String providerId, String firstName,
+			String middleName, String surname) throws Throwable {
+
+		if (claimsNumberInformationResponse.statusCode() == 200) {
+			if (claimsNumberInformationResponse.jsonPath().getMap("provider") == null) {
+				// no mobile
+				// check that the test is not looking for something
+				Assert.assertEquals(providerId, "");
+				Assert.assertEquals(firstName, "");
+				Assert.assertEquals(middleName, "");
+				Assert.assertEquals(surname, "");
+
+			} else {
+				String actualProviderId = claimsNumberInformationResponse.body().jsonPath()
+						.getString("provider.details.providerId");
+				String actualFirstName = claimsNumberInformationResponse.body().jsonPath()
+						.getString("provider.details.firstName");
+				String actualMiddleName = claimsNumberInformationResponse.body().jsonPath()
+						.getString("provider.details.middleName");
+				String actualSurname = claimsNumberInformationResponse.body().jsonPath().getString("provider.details.surname");
+
+				Assert.assertEquals(providerId, actualProviderId);
+				Assert.assertEquals(firstName, actualFirstName);
+				Assert.assertEquals(middleName, actualMiddleName);
+				Assert.assertEquals(surname, actualSurname);
+			}
+		}
+		//  else not 200 return code, don't process data
+	}
+
+	// And Anna view correct claims information for injury 
+	@Then("^Anna view correct claims information for injury \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void Anna_view_correct_claims_information_for_injury(String expectedAccidentDate, String expectedAccidentLocation, String expectedAccidentScene, 
+			String expectedDiagBodySide, String expectedDiagCode, String expectedDiagDescription, String expectedDiagEffectiveFrom,	String expectedDiagEffectiveTo, String expectedDiagInjurySite, String expectedDiagLevel, 
+			String expectedCauseOfAccident, boolean expectedInvolvesVehicle, boolean expectedWorkInjury, boolean expectedSportingInjury) throws Throwable {
+
+		if (claimsNumberInformationResponse.statusCode() == 200) {
+			String actualAccidentDate = claimsNumberInformationResponse.body().jsonPath().getString("injury.accidentDate");
+			String actualAccidentLocation = claimsNumberInformationResponse.body().jsonPath().getString("injury.accidentLocation");
+			String actualAccidentScene = claimsNumberInformationResponse.body().jsonPath().getString("injury.accidentScene");
+
+			String actualCauseOfAccident = claimsNumberInformationResponse.body().jsonPath()
+					.getString("injury.causeOfAccident");
+			boolean actualInvolvesVehicle = claimsNumberInformationResponse.body().jsonPath()
+					.getBoolean("injury.involvesVehicle");
+			boolean actualWorkInjury = claimsNumberInformationResponse.body().jsonPath().getBoolean("injury.workInjury");
+			boolean actualSportingInjury = claimsNumberInformationResponse.body().jsonPath()
+					.getBoolean("injury.sportingInjury");
+
+			Assert.assertEquals("Accident Date is Not As Expected",expectedAccidentDate, actualAccidentDate);
+			Assert.assertEquals("Accident Location is Not As Expected",expectedAccidentLocation, actualAccidentLocation);
+			Assert.assertEquals("Accident Scene is Not As Expected",expectedAccidentScene, actualAccidentScene);
+			// doing diagnostic rows below
+			Assert.assertEquals("Cause of Accident does not Match", expectedCauseOfAccident, actualCauseOfAccident);
+			Assert.assertEquals("Vehicle Flag does not Match", expectedInvolvesVehicle, actualInvolvesVehicle);
+			Assert.assertEquals("Work Flag does not Match", expectedWorkInjury, actualWorkInjury);
+			Assert.assertEquals("Sporting Injury Flag does not Match", expectedSportingInjury, actualSportingInjury);
+
+
+			List <HashMap> diagnosisMapList = claimsNumberInformationResponse.jsonPath().getList("injury.diagnosis");
+			// this HashMap contains both <Long,String> and <String,String>
+			
+			boolean flagFoundValidDiagnosticRow = false;
+			StringBuilder sbAllDiagResults = new StringBuilder();
+
+			if (diagnosisMapList != null && diagnosisMapList.size() > 0) {
+				// we have a list of diagnoses (a map or diagnosis elements)
+				// diagnosis LIST is made up of [bodySide, code, description, effectiveFrom, effectiveTo, injurySite, level
+				
+				// need to look at each element in the list and see if all elements match
+				// if they do, we can stop the loop, if not, keep looking
+				// at the end of the loop, if we haven't matched all rows, then throw an assertion error
+				
+				int rowNum = 1;
+				for (HashMap <String, String> diagnosisMap : diagnosisMapList) {
+
+					// clear previous results stringbuilder (used for info message)
+					sbDiagCurrentRowResults = new StringBuilder();
+					
+					sbDiagCurrentRowResults.append("\nDiagnostic Row ").append(rowNum).append(" of ").append(diagnosisMapList.size());
+					
+					// check our diag map data - this sets the flags 
+					// and populates sbDiagCurrentRowResults and then we add the content 
+					// of sbDiagCurrentRowResults to the sbAllDiagResults below (for summary of all rows)   
+					validBodySide  = checkDiagnosticValue("bodySide", expectedDiagBodySide, diagnosisMap);
+					validCode = checkDiagnosticValue("code", expectedDiagCode, diagnosisMap);
+					validDesc  = checkDiagnosticValue("description", expectedDiagDescription, diagnosisMap);
+					validFrom = checkDiagnosticValue("effectiveFrom", expectedDiagEffectiveFrom, diagnosisMap);
+					validTo = checkDiagnosticValue("effectiveTo", expectedDiagEffectiveTo, diagnosisMap);
+					validSite = checkDiagnosticValue("injurySite", expectedDiagInjurySite, diagnosisMap);
+					validLevel = checkDiagnosticValue("level", expectedDiagLevel, diagnosisMap);
+					
+					// check if all flags are valid 
+					if (validBodySide && validCode && validDesc && validFrom && validTo && validSite && validLevel) {
+						flagFoundValidDiagnosticRow = true;
+						// success - matching diagnostics row
+						System.out.println("found valid row - stopping");
+						sbDiagCurrentRowResults.insert(0, "\nValid Diagnostics row (" + rowNum + ")");
+						// in either case, add the current diag data text to our full list for all rows
+						sbAllDiagResults.append(sbDiagCurrentRowResults);
+						sbAllDiagResults.append("\nNot looking for additional rows");
+						// we found our matching row - stop looking
+						break;
+					} else {
+						// not a matching diagnostics row.  need to keep looking if there is more data
+						System.out.println("not a valid row - continuing if more records");
+						sbDiagCurrentRowResults.insert(0, "\nInvalid Diagnostics row (" + rowNum + ")");
+						// in either case, add the current diag data text to our full list for all rows
+						sbAllDiagResults.append(sbDiagCurrentRowResults);
+					}
+
+					rowNum++;
+					
+				} // end of for loop
+
+				System.out.println("done looking at diagnoses");
+
+			} else {
+				System.out.println("no diagnoses to check");
+				
+				//Using Empty map to check, comparing to expected values to ensure they are empty
+				HashMap diagnosisMap = new HashMap();
+
+				validBodySide  = checkDiagnosticValue("bodySide", expectedDiagBodySide, diagnosisMap);
+				validCode = checkDiagnosticValue("code", expectedDiagCode, diagnosisMap);
+				validDesc  = checkDiagnosticValue("description", expectedDiagDescription, diagnosisMap);
+				validFrom = checkDiagnosticValue("effectiveFrom", expectedDiagEffectiveFrom, diagnosisMap);
+				validTo = checkDiagnosticValue("effectiveTo", expectedDiagEffectiveTo, diagnosisMap);
+				validSite = checkDiagnosticValue("injurySite", expectedDiagInjurySite, diagnosisMap);
+				validLevel = checkDiagnosticValue("level", expectedDiagLevel, diagnosisMap);				
+				
+				// check if all flags are valid 
+				if (validBodySide && validCode && validDesc && validFrom && validTo && validSite && validLevel) {
+					flagFoundValidDiagnosticRow = true;
+					// success - matching diagnostics row
+					sbDiagCurrentRowResults.insert(0, "\nValid (Empty) Diagnostics row");
+				} else {
+					
+					// not a matching diagnostics row.  need to keep looking if there is more data
+					sbDiagCurrentRowResults.insert(0, "\nInvalid (Empty) Diagnostics row");
+				}
+				// in either case, add the current diag data text to our full list for all rows
+				sbAllDiagResults.append(sbDiagCurrentRowResults);
+				sbAllDiagResults.append("\n<Not looking for additional rows as this is am empty diag result>");
+				
+			} // end else (checking expected when we have empty diag data)
+
+			// print what we foind for diag data - it may be good or bad at this point
+			System.out.println(sbAllDiagResults.toString());
+
+			// throw an error if it's bad 
+			Assert.assertTrue("Diagnostic Data is not as expected:\n<" + sbAllDiagResults.toString() + ">", flagFoundValidDiagnosticRow);
+
+		}
+		//  else not 200 return code, don't process data
+	}
+	
+	// flags for the diagnostic codes
+	boolean validBodySide = false;
+	boolean validCode = false;
+	boolean validDesc = false;
+	boolean validFrom = false;
+	boolean validTo = false;
+	boolean validSite = false;
+	boolean validLevel = false;
+
+	StringBuilder sbDiagCurrentRowResults = new StringBuilder();
+	String result = null;
+	String unexpected = " is not as expected --> expected: (";
+
+	/**
+	 * private convenience method to look for data in the provided map
+	 * when our test data contains a list of maps e.g. injury diagnostics
+	 * as we check each row, we add to the 	 
+	 * 
+	 * the result of the check is stored in sbDiagCurrentRowResults
+	 * 
+	 * calling code will then add this sb data to the sbAllDiagResults which combines results from all rows 
+	 * 
+	 * 
+	 * @param diagString
+	 * @param expected
+	 * @param diagnosis
+	 * @return
+	 */
+	private boolean checkDiagnosticValue(String diagString, String expected, HashMap diagnosis) {
+
+		String sActualValue = String.valueOf(diagnosis.get(diagString));
+		StringBuilder sb = new StringBuilder();
+
+		// dealing with null to and from dates
+		if (sActualValue == null || 
+				sActualValue.equals("null")) {
+			//System.out.println("changing null to empty");
+			sActualValue = "";			
+		}
+
+		if (!sActualValue.equals(expected)) { 
+			result =  sb.append("\n\t\tDiagnostic ").append(diagString)
+					.append(unexpected)
+					.append(expected).append(") actual: (")
+					.append(sActualValue).append(")").toString();
+		} else {
+			result =  sb.append("\n\t\tDiagnostic is as expected: ")
+					.append(diagString).append("--> (").append(expected).append(")").toString();
+		}
+
+		// the list of diagnoses may contain multiple rows
+		// this list contains all elements from the diagnostic map for the current row 
+		sbDiagCurrentRowResults.append(result);
+		
+		if (!result.contains(unexpected)) {
+			// valid code
+			return true;
+		}
+		// invalid code
+		return false;
+	}
+
+	
+	
+	// And Anna view correct claims information for workCapacity
+	@Then("^Anna view correct claims information for workCapacity \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void Anna_view_correct_claims_information_for_workCapacity(int fullyUnfitDuration,
+			String fullyUnfitDurationFromDate, String fullyUnfitDurationUnits) throws Throwable {
+
+		if (claimsNumberInformationResponse.statusCode() == 200) {
+			int actualFullyUnfitDuration = claimsNumberInformationResponse.body().jsonPath()
+					.getInt("workCapacity.fullyUnfitDuration");
+			String actualFullyUnfitDurationFromDate = claimsNumberInformationResponse.body().jsonPath()
+					.getString("workCapacity.fullyUnfitDurationFromDate");
+			String actualFullyUnfitDurationUnits = claimsNumberInformationResponse.body().jsonPath()
+					.getString("workCapacity.fullyUnfitDurationUnits");
+
+			Assert.assertEquals(fullyUnfitDuration, actualFullyUnfitDuration);
+			Assert.assertEquals(fullyUnfitDurationFromDate, actualFullyUnfitDurationFromDate);
+			Assert.assertEquals(fullyUnfitDurationUnits, actualFullyUnfitDurationUnits);
+		} 		
+		//  else not 200 return code, don't process data
+	}
+
+	// And Anna view correct claims information for employment "<employerName>"
+	// "<employmentStatus>" "<incapacityPeriodDateRangeList>" "<from>" "<to>"
+	// "<type>" "<occupationCode>" "<occupationCodeDescription>" "<workType>"
+	@Then("^Anna view correct claims information for employment \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void Anna_view_correct_claims_information_for_employment(String expectedEmployerName, String expectedEmploymentStatus,
+			String expectedFrom, String expectedTo, String expectedType, String expectedOccupationCode,
+			String expectedOccupationCodeDescription) throws Throwable {
+
+		if (claimsNumberInformationResponse.statusCode() == 200) {
+
+			String actualEmployment = claimsNumberInformationResponse.body().jsonPath()
+					.getString("employment.employerName");
+			String actualEmploymentStatus = claimsNumberInformationResponse.body().jsonPath()
+					.getString("employment.employmentStatus");
+			List <String> actualOccupationCodeList = claimsNumberInformationResponse.jsonPath().getList("employment.occupationCode");
+			List <String> actualOccupationCodeDescriptionList = claimsNumberInformationResponse.jsonPath().getList("employment.occupationCodeDescription");
+
+			Assert.assertEquals(expectedEmployerName, actualEmployment);
+			Assert.assertEquals(expectedEmploymentStatus, actualEmploymentStatus);
+			
+			int actualOccupationCodeListSize = actualOccupationCodeList.size();
+			int actualOccupationCodeDescListSize = actualOccupationCodeDescriptionList.size();
+			
+			//boolean foundOccCode = false;
+			int OccuCodeIndex = 0;
+			String actualOccuCode = "";
+			for (int i = 0; i < actualOccupationCodeListSize; i++) {
+				if (expectedOccupationCode.equals(actualOccupationCodeList.get(i))) {
+					//foundOccCode = true;
+					actualOccuCode = actualOccupationCodeList.get(i);
+					OccuCodeIndex = i;
+					break;
+				}
+			}
+			//System.out.println("size of actualOccupationCodeList is " + actualOccupationCodeListSize);
+			
+			Assert.assertEquals("size of occupation code list is not the same as the size of the occupation description list", 
+					actualOccupationCodeListSize, actualOccupationCodeDescListSize);
+			
+			if (actualOccupationCodeListSize == 0) {
+				Assert.assertEquals("Claim does not contain OccupationCode " + expectedOccupationCode, 
+						expectedOccupationCode, actualOccuCode); // actualOccuCode is "" in this case
+				// actualOccupationCodeListSize is empty.  therefore actualOccupationCodeDescriptionList should also be empty
+				Assert.assertEquals("Claim does not contain OccupationDescription " + expectedOccupationCodeDescription, 
+						expectedOccupationCode, "");
+				
+			} else {
+				Assert.assertEquals("Claim does not contain OccupationCode " + expectedOccupationCode, 
+						expectedOccupationCode, actualOccuCode);
+				String actualOccuDesc = actualOccupationCodeDescriptionList.get(OccuCodeIndex);
+				Assert.assertEquals("Claim does not contain OccupationDescription " + expectedOccupationCodeDescription, 
+						expectedOccupationCodeDescription, actualOccuDesc);
+			}
+
+			List <HashMap> incapacityPeriodDateRangeList = claimsNumberInformationResponse.jsonPath().getList("employment.incapacityPeriodDateRangeList");
+			// hashmap contains both <Long,String> and <String,String> 
+			boolean flagPassFail = false;
+			// map contains both String,String> and <Long,String>
+			for (HashMap incapacityPeriod : incapacityPeriodDateRangeList) {
+				Long actualFrom = (Long) incapacityPeriod.get("from");   // from: long
+				Long actualTo =   (Long) incapacityPeriod.get("to");    // to: long
+				String actualType = (String) incapacityPeriod.get("type");   // type: string
+
+			//	System.out.println("comparing to record to find - from:"+actualFrom + ", to:" + actualTo + ", type:" + actualType);
+
+				if (actualType.equals(expectedType) ) {
+					// we could have multiple periods with the same type, so need to check the other fields 
+					if (expectedTo.equals(String.valueOf(actualTo))  && expectedFrom.equals(String.valueOf(actualFrom))) {
+						flagPassFail = true;
+						break;  // stop looking
+					} else {
+						System.out.println("found expected type " + expectedType 
+								+ " but to and from didnt match, still looking "
+								+ "(from-expected="+expectedFrom+"[actual="+actualFrom+"] to-expected="+expectedTo+"[actual="+actualTo+"])");
+					}
+				} // stop looking if we found our data
+				if (flagPassFail) break;
+			}
+
+			Assert.assertTrue("no matching incapacityPeriods with "
+					+ "from:" + expectedFrom + ", to:" + expectedTo + ", type:" + expectedType, flagPassFail);
+		} 
+		//  else not 200 return code, don't process data
+	}
+}

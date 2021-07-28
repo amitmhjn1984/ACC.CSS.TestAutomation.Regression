@@ -1,0 +1,159 @@
+package com.acc.regression.timeline;
+
+import java.net.URLEncoder;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.restassured.RestAssured;
+import com.jayway.restassured.response.Response;
+import com.jayway.restassured.specification.RequestSpecification;
+
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+import org.junit.Assert;
+import static com.jayway.restassured.RestAssured.given;
+import static io.restassured.path.json.JsonPath.from;
+import com.acc.regression.*;
+
+@SuppressWarnings("unchecked")
+public class TimelineActivityTypeService extends InitializeTest {
+	String endpoint = null;
+	String userId = null;
+	String token=null;
+	
+	boolean flagPassFail;
+	JSONArray activityType = new JSONArray();
+	String activityTypedb = null;
+	String status =null;
+	
+	//String dbCLAIM_ID, dbLAST_UPDATE_TIME, dbCREATE_DATE, dbLAST_UPDATE_BY,dbDATA, dbTITLE, dbDESCRIPTION, dbTASK_TYPE_ID, dbEOS_SUPPORT_ID, dbEOS_STATUS, dbUI_STATUS, dbEOS_STATUS_DETAIL;
+	
+	Response getActivityTypeInformationResponse;
+	Response postActivityTypeResponse;
+
+	String description, category, id, type;
+
+	
+	@When("^Anna retrieve her timeline activity type \"([^\"]*)\" \"([^\"]*)\"$")
+	public void anna_create_a_new_activity_type(String activityType,String Status) throws Throwable {
+		this.activityTypedb = activityType;
+		this.status = Status;
+		this.userId = accUser;
+		
+		GetJWT JWT = new GetJWT();
+		token = JWT.getToken(this.userId);
+		
+		this.endpoint = "api/v1/" +this.userId+ "/activityTypes/"+activityType;
+
+		System.out.println(this.endpoint + " --Endpoint");
+        	
+        	getActivityTypeInformationResponse = 	given().
+        												header("X-Authorization", token).
+							            				relaxedHTTPSValidation().
+							            				urlEncodingEnabled(false).
+							            				contentType("application/json").
+							            				queryParam("status", status).
+						            				when().
+						            					get(this.endpoint);
+
+		 System.out.println(getActivityTypeInformationResponse.asString());
+		if (getActivityTypeInformationResponse.statusCode() != 200) {
+			System.out.println(
+					"Unable to get activity type information, Status Code--->" + getActivityTypeInformationResponse.statusCode());
+		}else{
+			setActivityTypeInformation();
+		}
+	}
+        
+	@Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" for timeline activity type$")
+	public void anna_should_see_the_request_returning_with_for_activity_type(int expectedstatuscode,
+			String expectedStatusMessage) throws Throwable {
+
+		Assert.assertTrue("Activity type for Timeline Service is NOT Running fine",
+				expectedstatuscode == getActivityTypeInformationResponse.statusCode());
+
+		if (getActivityTypeInformationResponse.statusCode() != 200) {
+			System.out.println("Get timeline status message - "
+					+ getActivityTypeInformationResponse.body().jsonPath().get("message"));
+			Assert.assertEquals(expectedStatusMessage,
+					getActivityTypeInformationResponse.body().jsonPath().get("message"));
+		}
+
+	}
+
+     //Anna is able to view timeline activity type
+        @Then("^Anna is able to view timeline activity type$")
+        public void anna_is_able_to_view_timeline_activity_type() throws Throwable {
+        	//String dbCLAIM_ID, dbLAST_UPDATE_TIME, dbCREATE_DATE, dbLAST_UPDATE_BY,dbDATA, dbTITLE, dbDESCRIPTION, dbTASK_TYPE_ID, dbEOS_SUPPORT_ID, dbEOS_STATUS, dbUI_STATUS, dbEOS_STATUS_DETAIL;
+
+
+        	PreparedStatement statement;
+			Connection connection = setup();
+			int totalDBCount = 0;
+
+	        ResultSet resultSet = null;
+	        try {
+	        	statement =connection.prepareStatement(" select activities.ui_status , lastest_per_support_id.* from CSS_TIMELINE_ACTIVITIES activities,  "
+	        			+ "(SELECT max(ID) as id, count(id) as countRow, [EOS_SUPPORT_ID] FROM [CSS].[CSS_TIMELINE_ACTIVITIES]"
+	        			+ " where user_id =? and ACTIVITY_TYPE =? and ui_status =? group by EOS_SUPPORT_ID) as lastest_per_support_id "
+	        			+ "where activities.id = lastest_per_support_id.id");
+	            statement.setString(1, this.userId);
+	            statement.setString(2, this.activityTypedb);
+	            statement.setString(3, this.status);
+	            resultSet = statement.executeQuery();
+	           
+	            if (resultSet != null) {
+	                while (resultSet.next()) {
+	                	totalDBCount = resultSet.getRow();
+	                }
+	            }
+	        } catch (SQLException sql) {
+	            System.out.println("Exception while activity types");
+	            System.out.print(sql.getMessage());
+	            if (resultSet != null) {
+	                resultSet.close();
+	            }
+
+	            connection.rollback();
+	            System.out.println("Stack: " + sql.getStackTrace().toString());
+	        } finally {
+	            if (resultSet != null) {
+	                resultSet.close();
+	            }
+
+	            connection.close();
+	        }
+        	
+        	Assert.assertEquals(this.activityType.size(), totalDBCount);
+        	
+        }
+        
+        public void setActivityTypeInformation() throws ParseException{
+        	
+        	if (getActivityTypeInformationResponse.statusCode() != 404) {
+    			String getActivityTypeString = getActivityTypeInformationResponse.asString();
+
+    			JSONParser parser = new JSONParser();
+    			this.activityType = (JSONArray) parser.parse(getActivityTypeString);
+    		}
+
+        	
+        }
+        
+    }

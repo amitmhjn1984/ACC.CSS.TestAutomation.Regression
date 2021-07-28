@@ -1,0 +1,49 @@
+#Feature: Check user contact is retrieve and update servie is UP and RUNNING - GET /api/v1/users/{userId}/contacts
+  #			PUT /api/v1/users/{userId}/contacts
+#
+  #@css @users @regression @smoke
+  #Scenario Outline: Updating the user home contacts information
+    #Given Anna is ACC user with existing contact
+    #And Anna get contact information
+    #When Anna update ACC home contact "<emailAddress>" "<homeAreaCode>" "<homeCountryCode>" "<homePhoneNumber>" "<homeExtension>" information
+    #Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for contacts
+    #And Anna is able to view updated contact information
+#
+    #Examples: Anna checking on User contact service
+      #| testCondition                       | emailAddress          | homeAreaCode | homeCountryCode | homePhoneNumber | homeExtension | statuscode | statusmessage                |
+      #| Valid home details                  | test@acc.co.nz        |           09 | +64             |         0928765 |            09 |        200 | Contact details updated      |
+      #| Invalid email address               | john..doe@example.com |         0065 | +64             |         0938765 |               |        400 | Request message format error |
+      #| Invalid phone no. with special char | john..doe@example.com |         0065 | +64             | //              |               |        400 | Request message format error |
+      #| Invalid phone no                    | john..doe@example.com |         0065 | +64             |   2323234234342 |               |        400 | Request message format error |
+      #| Area code more than 5 digit         |                       |      0513211 | +64             |         1234467 |               |        400 | Request message format error |
+#
+  #@css @users @regression @smoke
+  #Scenario Outline: Updating the user work contacts information
+    #Given Anna is ACC user with existing contact
+    #And Anna get contact information
+    #When Anna update ACC work contact "<emailAddress>" "<workAreaCode>" "<workCountryCode>" "<workPhoneNumber>" "<workExtension>" information
+    #Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for contacts
+    #And Anna is able to view updated contact information
+#
+    #Examples: Anna checking on User contact service
+      #| testCondition        | emailAddress   | workAreaCode | workCountryCode | workPhoneNumber          | workExtension | statuscode | statusmessage                                    |
+      #| Valid phone number   | test@acc.co.nz |           04 | +64             |                  2340008 |            01 |        200 | Contact details updated                          |
+      #| Valid phone number   | test@acc.co.nz |         0800 | +64             |                123343434 |            03 |        200 | Contact details updated                          |
+      #| Valid phone number   | test@acc.co.nz |           04 |            0064 |                  2340008 |            04 |        200 | Contact details updated                          |
+      #| Invalid phone number | test@acc.co.nz |         0065 | +64             | 121323233434343434098765 |            04 |        400 | Schema validation failed for JAXB object against |
+#
+  #@css @users @regression @smoke
+  #Scenario Outline: Updating the user mobile contacts information
+    #Given Anna is ACC user with existing contact
+    #And Anna get contact information
+    #When Anna update ACC mobile contact "<emailAddress>" "<mobileAreaCode>" "<mobileCountryCode>" "<mobilePhoneNumber>" "<mobileExtension>" information
+    #Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for contacts
+    #And Anna is able to view updated contact information
+#
+    #Examples: Anna checking on User contact service
+      #| Test Condition               | emailAddress   | mobileAreaCode | mobileCountryCode | mobilePhoneNumber     | mobileExtension | statuscode | statusmessage                                   |
+      #| Valid mobile details         | test@acc.co.nz |                | +64               |           02102292922 |                 |        200 | Contact details updated                         |
+      #| InValid mobile number        | test@acc.co.nz |                | +64               | 234324324234234098765 |                 |        400 | chema validation failed for JAXB object against |
+      #| InValid area code            | test@acc.co.nz |    32434543543 | +64               |                098765 |                 |        400 | Request message format error                    |
+      #| country code long            | test@acc.co.nz |                |         234242353 |           02102292922 |                 |        200 | Contact details updated                         |
+      #| Mobile number with extension | test@acc.co.nz |            021 |              0064 |                098765 |             121 |        200 | Contact details updated                         |

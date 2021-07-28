@@ -1,0 +1,116 @@
+package com.acc.regression.support;
+
+import static com.jayway.restassured.RestAssured.given;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import org.junit.Assert;
+
+import com.acc.regression.GetJWT;
+import com.acc.regression.InitializeTest;
+import com.jayway.restassured.response.Response;
+
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+
+public class SupportActive extends InitializeTest  {
+	String endpoint= null;
+	Response getActiveSupportResponse;
+	String userId=null;
+	String claimId = null;
+	String token=null;
+	
+	
+	@Given("^Anna is ACC client \"([^\"]*)\" who want to get the list of her active support for \"([^\"]*)\"$")
+	public void anna_is_ACC_client_who_want_to_get_the_list_of_her_active_support_for(String userId, String claimId) throws Throwable {
+		this.userId = userId;
+		this.claimId= claimId;
+		
+		GetJWT JWT = new GetJWT();
+		token = JWT.getToken(this.userId);
+		
+		///api/v1/{userId}/claims/{claimId}/supports/active
+		this.endpoint = "api/v1/"+ this.userId +"/claims/" +this.claimId+"/supports/active";
+	}
+
+	@When("^Anna get list of active support list$")
+	public void anna_get_list_of_active_support_list() throws Throwable {
+		getActiveSupportResponse = 	given().
+											header("X-Authorization", token).
+											relaxedHTTPSValidation().
+											urlEncodingEnabled(false).
+											contentType("application/json").
+										when().
+											get(this.endpoint);
+		
+		System.out.println("<---Get Response--->");
+		System.out.println(getActiveSupportResponse.asString());
+		
+		if ((getActiveSupportResponse.statusCode() != 200)
+					|| (getActiveSupportResponse.statusCode() == 404)) {
+			System.out.println("Status Code--->" + getActiveSupportResponse.statusCode());
+		}
+
+	}
+	@Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" active support$")
+	public void anna_should_see_the_request_returning_with_active_support(int expectedstatuscode, String message) throws Throwable {
+		 System.out.println("Returned Status code for the request - " + getActiveSupportResponse.statusCode());
+	       // System.out.println("Put Account status message - " +putAddressInformationResponse.body().jsonPath().get("message"));
+	        
+	        Assert.assertTrue("Cliam-Active Support get Service is NOT Running fine", 
+	                expectedstatuscode == getActiveSupportResponse.statusCode());
+	}
+	
+	@Then("^Anna active support list is correct$")
+	public void anna_active_support_list_is_correct() throws Throwable {
+		if(getActiveSupportResponse.statusCode()==200){
+			PreparedStatement statement;
+			Connection connection = setup();
+			int totalDBCount = 0;
+
+	        ResultSet resultSet = null;
+	        try {
+	        	statement =connection.prepareStatement("select count(*) as rowCounts from CSS_TIMELINE_ACTIVITIES activities , CSS_ENTITLEMENT_GROUPS entitlement	"
+	        			+ "where activities.user_id = ? "
+	        			+ "and activities.claim_id = ?	"
+	        			+ "and activities.last_update_by <> ?	"
+	        			+ "and activities.ACTIVITY_TYPE like '%SUPPORT%'"
+	        			+ "and activities.EOS_Support_id = entitlement.code");
+	            statement.setString(1, this.userId);
+	            statement.setString(2, this.claimId);
+	            statement.setString(3, this.userId);
+	            resultSet = statement.executeQuery();
+	           
+	            if (resultSet != null) {
+	                while (resultSet.next()) {
+	                	totalDBCount = resultSet.getRow();
+	                	
+	                }
+	            }
+	        } catch (SQLException sql) {
+	            System.out.println("Exception while getting total number of invitation code");
+	            System.out.print(sql.getMessage());
+	            if (resultSet != null) {
+	                resultSet.close();
+	            }
+	            connection.rollback();
+	            System.out.println("Stack: " + sql.getStackTrace().toString());
+	        } finally {
+	            if (resultSet != null) {
+	                resultSet.close();
+	            }
+	            connection.close();
+	        }
+	    	int responseCount = getActiveSupportResponse.body().path("list.size()");
+	    	Assert.assertEquals(responseCount, totalDBCount);
+			
+		}
+
+
+	}
+
+}

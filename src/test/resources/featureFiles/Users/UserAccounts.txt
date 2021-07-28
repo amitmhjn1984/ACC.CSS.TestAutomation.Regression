@@ -1,0 +1,66 @@
+Feature: Check user account is retrieve and update servie is UP and RUNNING - GET /api/v1/users/{userId}/accounts
+  			PUT /api/v1/users/{userId}/accounts
+  			Actor: Anna is an existing ACC client.
+
+  @css @users @smoke 
+  Scenario Outline: Updating the user account information smoke test
+    Given Anna is ACC user "<RequestType>" on "<endpoint>" with existing account, test description "<TestCondition>"
+    And Anna get accounts information
+    When Anna update ACC account "<ReimbursementAccountNumber>" "<ReimbursementBankName>" "<WCaccountNumber>" "<WCbankName>" "<WCIRDNumber>" "<WcTaxCode>" information
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>"
+
+    #And Anna is able to view updated account information
+    Examples: Anna checking on User Account service
+      | RequestType | endpoint | TestCondition                                 | ReimbursementAccountNumber | ReimbursementBankName            | WCaccountNumber    | WCbankName | WCIRDNumber | WcTaxCode | statuscode | statusmessage                |
+      | GET         | users    | Valid account update information              |            063333344430002 | BNZ                              |    063333344430001 | ANC        | 058898872  | MC        |        200 | Account details updated      |
+      | GET         | users    | Sending back same information                 |                            |                                  |                    |            |             |           |        200 | Account details updated       |
+      | GET         | users    | Long bank account name                        |            123333003444301 | ASB12345678900987654321123456780 |    063333344430001 | ASB        |   058898872 | M         |        200 | Account details updated      |
+      | GET         | users    | Reimbursement account without dash            |            063333344430002 | ANZ                              |    063333344430001 | ASB        | 058898872  | M         |        200 | Account details updated      |
+      | GET         | users    | Weekly account without dash                   |            033343000334443 | KIWI                             | 03-3343-0003344-43 | WestPac    | 058898872 | SS        |        200 | Account details updated      |
+      | GET         | users    | Incorrect Reimbursement account number format | Test                       | KIWI                             | 44-4777-4432-00    | ASB        |             | MC        |        400 | Request message format error |
+      | GET         | users    | Incorrect weekly comp IRD number              |             03333000334443 | KIWI                             |     03333000334443 | ASB        | 23234324234 |           |        400 | Request message format error |
+      | GET         | users    | Incorrrect Weekly Comp Account Number         | 03-3330-003344-44          | KIWI                             | Test               | ASB        |             |           |        400 | Request message format error |
+      | GET         | users    | Update bank account number only               |                            |                                  |    063333344430099 |            |             |           |        200 | Account details updated      |
+      | GET         | users    | Update Tax Code only                          |                            |                                  |                    |            |             | SD        |        200 | Account details updated      |
+
+  @css @users @regression 
+  Scenario Outline: Updating the user account information
+    Given Anna is ACC user "<RequestType>" on "<endpoint>" with existing account, test description "<TestCondition>"
+    And Anna get accounts information
+    When Anna update ACC account "<ReimbursementAccountNumber>" "<ReimbursementBankName>" "<WCaccountNumber>" "<WCbankName>" "<WCIRDNumber>" "<WcTaxCode>" information
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>"
+
+    #And Anna is able to view updated account information
+    Examples: Anna checking on User Account service
+      | RequestType | endpoint | TestCondition                               | ReimbursementAccountNumber | ReimbursementBankName            | WCaccountNumber     | WCbankName | WCIRDNumber | WcTaxCode | statuscode | statusmessage                |  |
+      | GET         | users    | Valid account update information            |            063333344430002 | BNZ                              |     063333344430001 | ANC        | 058898872   | MC        |        200 | Account details updated      |  |
+      | GET         | users    | Long bank account name                      |            123333344431100 | ASB12345678900987654321123456780 |     063333344430001 | ASB        | 058898872   | M         |        200 | Account details updated      |  |
+      | GET         | users    | Weekly account with 2 sufix                 | 03-3343-0003344-43         | KIWI                             | 12-4447-7744440-00  | ASB        |   111111111 | M         |        200 | Account details updated      |  |
+      | GET         | users    | Weekly account with 3 sufix                 | 03-3343-0003344-04         | KIWI                             | 12-4447-7744440-003 | ASB        |   111111122 | CATE      |        200 | Account details updated      |  |
+      | GET         | users    | Reimbursement account with 2 sufix          | 03-3343-0003344-43         | KIWI                             | 12-4447-7744440-02  | ASB        |   111111122 | M         |        200 | Account details updated      |  |
+      | GET         | users    | Reimbursement account with 3 sufix          | 03-3343-0003344-044        | KIWI                             | 12-4447-7744440-03  | ASB        |   111111122 | MAT       |        200 | Account details updated      |  |
+      | GET         | users    | Reimbursement IRD with 8 digit and a 0      | 03-3343-0003344-043        | KIWI                             | 12-4447-7744440-003 | ASB        |   010506123 | L         |        200 | Account details updated      |  |
+      | GET         | users    | Reimbursement IRD with 8 digit without 0    | 03-3343-0003344-043        | KIWI                             | 12-4447-7744440-003 | ASB        |   10506123 | L         |        200 | Account details updated      |  |
+      | GET         | users    | Invalid account number                      |              3330003344450 | KIWI                             |      06333000334445 | WestPac    |             |           |        400 | Request message format error |  |
+      | GET         | users    | Invalid weekly account number               |              3330003344450 | KIWI                             |       3330003344450 | WestPac    |             |           |        400 | Request message format error |  |
+      | GET         | users    | Incorrect weekly comp account number format | Test                       | KIWI                             | 44-4777-4432-00     | ASB        | 111111111   | MC        |        400 | Request message format error |  |
+      | GET         | users    | IRD number with special char                | Test                       | KIWI                             | 44-4777-4432-00     | ASB        | $           |           |        400 | Request message format error |  |
+      | GET         | users    | taxCode with special char                   | Test                       | KIWI                             | 44-4777-4432-00     | ASB        |             | $         |        400 | Request message format error |  |
+
+  @css @users @regression 
+  Scenario Outline: Updating the user account  with incorrect information
+    Given Anna is ACC user "<RequestType>" on "<endpoint>" with existing account, test description "<TestCondition>"
+    And Anna get accounts information
+    When Anna update ACC account "<WCaccountNumber>" "<WCbankName>" "<ReimbursementAccountNumber>" "<ReimbursementBankName>" "<ReimbursementIRDNumber>" "<ReimbursementTaxCode>" information
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>"
+
+    #And Anna is able to view updated account information
+    Examples: Anna checking on User Account service
+      | RequestType | endpoint | TestCondition                                | WCaccountNumber   | WCbankName | ReimbursementAccountNumber | ReimbursementBankName | ReimbursementIRDNumber | ReimbursementTaxCode | statuscode | statusmessage                |
+      | GET         | users    | Incorrect weekly comp account number format  | Test              | KIWI       | 44-4777-4432-00            | ASB                   |            23234324234 | MC                   |        400 | Request message format error |
+      | GET         | users    | Incorrrect reimbursement Account Number      | 03-3330-003344-44 | KIWI       | Test                       | ASB                   |                        |                      |        400 | Request message format error |
+      | GET         | users    | Special Char in reimbursement account Number |    03333000334445 | KIWI       | /                          | ASB                   | M01                    |                      |        400 | Request message format error |
+      | GET         | users    | Special Char in reimbursement Tax Code       |    03333000334445 | KIWI       |             06333000334445 | \\                    | SD01                   | +                    |        400 | Request message format error |
+      | GET         | users    | Special Char in  reimbursement IRD number    |    03333000334445 | KIWI       |             06333000334445 | WestPac               | $                      |                      |        400 | Request message format error |
+      | GET         | users    | Invalid account number                       |     3330003344450 | KIWI       |             06333000334445 | WestPac               | $                      |                      |        400 | Request message format error |
+      | GET         | users    | Invalid weekly account number                |     3330003344450 | KIWI       |             06333000334445 | WestPac               | $                      |                      |        400 | Request message format error |

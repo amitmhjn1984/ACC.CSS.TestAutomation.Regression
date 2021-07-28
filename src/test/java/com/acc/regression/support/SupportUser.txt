@@ -1,0 +1,293 @@
+package com.acc.regression.support;
+
+import static com.jayway.restassured.RestAssured.given;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.junit.Assert;
+
+import com.acc.regression.GetJWT;
+import com.acc.regression.GetUser;
+import com.acc.regression.InitializeTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.JsonElement;
+import com.jayway.restassured.response.Response;
+
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+
+@SuppressWarnings("unchecked")
+
+public class SupportUser extends InitializeTest {
+	String endpoint = null;
+	String userId = null;
+	String token =null;
+	String claimId= null;
+	String activityType =null;
+	
+	Response postSupportUserInformationResponse;
+
+	String comments;
+	String supportId;
+
+	JSONObject support = new JSONObject();
+	
+	JSONObject dataObject = new JSONObject();
+	JSONArray datayArray = new JSONArray();
+
+	
+	JSONObject collection = new JSONObject();
+	JSONArray titleArray = new JSONArray();
+	JSONArray valuesArray = new JSONArray();
+	JSONArray TwoDvaluesArray = new JSONArray();
+	
+	private boolean flagPassFail =false;
+
+	@Given("^Anna is ACC user with existing support \"([^\"]*)\" \"([^\"]*)\"$")
+	public void anna_is_ACC_user_with_existing_support(String userId, String testDescription) throws Throwable {
+		if (userId.equals("")) {
+			GetUser user = new GetUser();
+			user.selectRandomUser();
+			this.userId = accUser;
+
+		} else {
+			this.userId = userId;
+		}
+
+		GetJWT JWT = new GetJWT();
+		token = JWT.getToken(this.userId);
+
+	}
+	
+	// Anna request for ACC support "<claimId>" "<activityType>" "<title>"
+	// "<description>" "<key>" "<value>" "<collectionTitle>" "<values>"
+	// "<comment>"
+	@When("^Anna request for ACC support \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void anna_request_for_ACC_support(String claimId, String activityType, String title, String description,
+			String key, String value, String collectionTitle, String values, String comment) throws Throwable {
+		this.endpoint = "/api/v1/"+this.userId+"/supports";
+		this.claimId = claimId;
+		this.activityType = activityType;
+
+		support.put("claimId", claimId);
+
+		support.put("activityType", activityType);
+		support.put("activityType", activityType);
+		support.put("title", title);
+		support.put("description", description);
+		support.put("comment", comment);
+
+		dataObject.put("key", key);
+		dataObject.put("value", value);
+		datayArray.add(dataObject);
+
+		support.put("data", datayArray);
+
+		titleArray.add(collectionTitle);
+		valuesArray.add(value);
+		TwoDvaluesArray.add(valuesArray);
+
+		collection.put("title", titleArray);
+		collection.put("values", TwoDvaluesArray);
+
+		support.put("collection", collection);
+
+		 ObjectMapper mapper = new ObjectMapper();
+		 System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(support));
+
+         postSupportUserInformationResponse =given().
+        		 								header("X-Authorization", token).
+				            		 			relaxedHTTPSValidation().
+				            		 			urlEncodingEnabled(false).
+				            		 			contentType("application/json").
+				            		 			body(support).
+				            		 		when().
+				            		 			post(this.endpoint);
+
+		System.out.println("<---------Below is Post response body----------->");
+		System.out.println(postSupportUserInformationResponse.jsonPath().prettyPrint());
+		
+		if (postSupportUserInformationResponse.statusCode() != 200) {
+			System.out.println("Unable to update the account information Status Code--->"
+					+ postSupportUserInformationResponse.statusCode());		
+
+		}
+	}
+	
+	@When("^Anna request for ACC support without claim id \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void anna_request_for_ACC_support_without_claim_id(String activityType, String title, String description,
+			String key, String value, String comment) throws Throwable {
+		this.endpoint = "/api/v1/"+this.userId+"/supports";
+		//this.claimId = claimId;
+		this.activityType = activityType;
+
+		//support.put("claimId", claimId);
+
+		//support.put("activityType", activityType);
+		support.put("activityType", activityType);
+		support.put("title", title);
+	//	support.put("description", description);
+		support.put("comment", comment);
+
+		dataObject.put("key", key);
+		dataObject.put("value", value);
+		datayArray.add(dataObject);
+
+		support.put("data", datayArray);
+
+	//	titleArray.add(collectionTitle);
+	//	valuesArray.add(value);
+	//	TwoDvaluesArray.add(valuesArray);
+
+	//	collection.put("title", titleArray);
+	//	collection.put("values", TwoDvaluesArray);
+
+	//	support.put("collection", collection);
+
+		 ObjectMapper mapper = new ObjectMapper();
+		 System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(support));
+
+         postSupportUserInformationResponse =given().
+        		 								header("X-Authorization", token).
+				            		 			relaxedHTTPSValidation().
+				            		 			urlEncodingEnabled(false).
+				            		 			contentType("application/json").
+				            		 			body(support).
+				            		 		when().
+				            		 			post(this.endpoint);
+
+		System.out.println("<---------Below is POST response body----------->");
+		System.out.println(postSupportUserInformationResponse.jsonPath().prettyPrint());
+		
+		if (postSupportUserInformationResponse.statusCode() != 200) {
+			System.out.println("Unable to update the account information Status Code--->"
+					+ postSupportUserInformationResponse.statusCode());
+
+		}
+	}	
+
+	@Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" for support$")
+	public void anna_should_see_the_request_returning_with_for_support(int expectedstatuscode, String message) throws Throwable {
+		System.out.println("Returned Status code for the request - " + postSupportUserInformationResponse.statusCode());
+
+		Assert.assertTrue("Support POST Service is NOT Running fine",
+				expectedstatuscode == postSupportUserInformationResponse.statusCode());
+		if(postSupportUserInformationResponse.statusCode()!=200){
+			Assert.assertTrue("Support POST Service error message does not match", postSupportUserInformationResponse.body().jsonPath().getString("message").contains(message));
+		}
+	}
+
+	@Then("^Anna support request is created$")
+	public void anna_support_request_is_created() throws Throwable {
+		if (postSupportUserInformationResponse.statusCode() == 200) {
+
+			StringBuilder sbErrorMessages = new StringBuilder();
+			boolean flagValidUserId = false;
+			boolean flagValidClaimId = false;
+			boolean flagValidActivityType = false;
+			boolean flagValidData = false;
+			boolean flagValidStatus = false;
+
+			PreparedStatement statement;
+			Connection connection = setup();
+			int totalDBCount = 0;
+			this.support.remove("description");
+			this.support.remove("activityType");
+			this.support.remove("title");
+			this.support.remove("claimId");
+
+			ResultSet resultSet = null;
+			try {
+				String query = "select * from CSS_TIMELINE_ACTIVITIES where USER_ID = ? and CLAIM_ID =? and ACTIVITY_TYPE =?";
+				statement = connection.prepareStatement(query);
+				statement.setString(1, this.userId);
+				statement.setString(2, this.claimId);
+				statement.setString(3, this.activityType);
+				resultSet = statement.executeQuery();
+
+				if (resultSet != null) {
+					while (resultSet.next()) {
+						totalDBCount = resultSet.getRow();
+						String dbDATA = resultSet.getString("DATA");
+						String dbClaimId = resultSet.getString("CLAIM_ID");
+						String dbUserId = resultSet.getString("USER_ID");
+						String dbActivityType = resultSet.getString("ACTIVITY_TYPE");
+						String dbUiStatus = resultSet.getString("UI_STATUS");
+
+						System.out.println("Database data info: " + dbDATA);
+						System.out.println("Support Json info: " + this.support.toString());
+						JSONParser parser = new JSONParser();
+						JSONObject jsonData = (JSONObject) parser.parse(dbDATA);
+						JSONObject expectedResult = (JSONObject) parser.parse(this.support.toString());
+						if (this.userId.equals(dbUserId)) {
+							flagValidUserId = true;
+							if (this.claimId.equals(dbClaimId)) {
+								flagValidClaimId = true;
+							} else {
+								sbErrorMessages.append(
+										"\nExpected claimId (" + this.claimId + ") does not match (" + dbClaimId + ")");
+							}
+							if (this.activityType.equals(dbActivityType)) {
+								flagValidActivityType = true;
+							} else {
+								sbErrorMessages.append("\nExpected activity type (" + this.activityType
+										+ ") does not match (" + dbActivityType + ")");
+							}
+							if (expectedResult.equals(jsonData)) {
+								flagValidData = true;
+							} else {
+								sbErrorMessages.append(
+										"\nExpected data (" + expectedResult + ") does not match (" + jsonData + ")");
+							}
+							if(dbUiStatus!=null){
+								if (dbUiStatus.equals("PENDING")) {
+									flagValidStatus = true;
+								} else {
+									sbErrorMessages.append(
+											"\nExpected Status as Pending but it was (" + dbUiStatus + ")");
+								}
+								
+							}
+							
+							if(flagValidUserId && flagValidClaimId && flagValidActivityType &&flagValidData&&flagValidStatus){
+								break;
+							}
+
+						} else {
+							sbErrorMessages
+									.append("\nExpected userId (" + this.userId + ") does not exist in database");
+						}
+
+					}
+				}
+			} catch (SQLException sql) {
+				System.out.println("Exception while getting total number of invitation code");
+				System.out.print(sql.getMessage());
+				if (resultSet != null) {
+					resultSet.close();
+				}
+				connection.rollback();
+				System.out.println("Stack: " + sql.getStackTrace().toString());
+			} finally {
+				if (resultSet != null) {
+					resultSet.close();
+				}
+				connection.close();
+			}
+			 Assert.assertTrue(sbErrorMessages.toString(), flagValidUserId && flagValidClaimId && flagValidActivityType &&flagValidData&&flagValidStatus);
+
+		}
+		
+	}
+
+}

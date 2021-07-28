@@ -1,0 +1,60 @@
+Feature: Retrieve user payment Pending, Service  is UP and RUNNING - GET /api/v1/users/{userId}/claims/{claimId}/payments/pending
+  		Actor:Anna is existing ACC client who would like to view pending payments for a claim
+
+  @css @payments @regression @smoke
+  Scenario Outline: Retrieve pending payment case owner information for a claim
+    Given Anna is ACC user "<userId>" with existing claimId "<claimId>"
+    When Anna get pending payment information from page number "<page>" till pagesize "<pageSize>"
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for pending payments
+    And Anna pending payment cash information is correct for the claim "<bankAccountNumber>" "<payeeName>" "<paymentAmount>" "<paymentDate>" "<paymentMethodCode>" "<paymentStatusCode>" "<weeklyCompOnly>"
+
+    Examples: Anna checking on Pending Payments for a claim
+      | testDescription                                                | userId   | claimId     | page | pageSize | bankAccountNumber | payeeName    | paymentAmount | paymentDate | paymentMethodCode | paymentStatusCode | weeklyCompOnly | statuscode | statusmessage |
+      | Pending Payment API with ACC45 Claim with Pending Payment Data | 17236944 | 10041251095 |    1 |       50 | 02123200227321001 | Clark T Kent |         86.96 | 02/03/2018  | D                 |                 0 | false          |        200 |               |
+      | Pending Payment API with ACC45 Claim and No Page info          | 17236944 | 10041251095 |      |       50 | 02123200227321001 | Clark T Kent |         86.96 | 02/03/2018  | D                 |                 0 | false          |        200 |               |
+      | Pending Payment API with ACC45 Claim and No PageSize info      | 17236944 | 10041251095 |    1 |          | 02123200227321001 | Clark T Kent |         86.96 | 02/03/2018  | D                 |                 0 | false          |        200 |               |
+      | Pending Payment API with weeklyCompOnly as True                | 17240902 | 10041256394 |    1 |      200 | 02123200227321011 | Aqua A Man   |        995.23 | 03/12/2018  | D                 |                 0 | true           |        200 |               |
+
+  ## | Pending Payment API ACC45 linked to PI claim | Q4100868 | 10039549518 |    1 |      200 | 02123200227321001 | Mr Michael D Goodwin |        264.13 | 14/12/2018  | D                 |                 0 | true           |        200 |               |
+  # | Pending Payment API Exception Payments | H1331109 | 10039547378 |    1 |      200 | 03010400908048002 | Mr Craig D Hines |       3386.46 | 11/01/2018  | D                 |                 0 | false           |        200 |               |
+  @css @payments @regression
+  Scenario Outline: Retrieve pending payment case owner information for a claim (with some intentionally Missing information)
+    Given Anna is ACC user "<userId>" with existing claimId "<claimId>"
+    When Anna get pending payment information from page number "<page>" till pagesize "<pageSize>"
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for pending payments
+    And Anna pending payment cash information is correct for the claim "<bankAccountNumber>" "<payeeName>" "<paymentAmount>" "<paymentDate>" "<paymentMethodCode>" "<paymentStatusCode>" "<weeklyCompOnly>"
+
+    Examples: Anna checking on Pending Payments for a claim
+      | testDescription                                                     | userId   | claimId     | page | pageSize | bankAccountNumber | payeeName  | paymentAmount | paymentDate | paymentMethodCode | paymentStatusCode | weeklyCompOnly | statuscode | statusmessage                                             |
+      #     | Pending Payment API with ACC45 Claim with 0 Page Number             | 17236944 | 10041251095 |    0 |       50 | 02123200227321001 | Clark T Kent |         86.96 | 02/03/2018  | D                 |                 0 | false          |        400 | Request message format error |
+      #     | Pending Payment API with ACC45 Claim with Invalid Page Number       | 17236944 | 10041251095 |   -1 |       50 | 02123200227321001 | Clark T Kent |         86.96 | 02/03/2018  | D                 |                 0 | false          |        400 | Request message format error |
+      #     | Pending Payment API with ACC45 Claim with Invalid Page info         | 17236944 | 10041251095 |    1 |      -50 | 02123200227321001 | Clark T Kent |         86.96 | 02/03/2018  | D                 |                 0 | false          |        400 | Request message format error |
+      #     | Pending Payment API with ACC45 Claim with 0 Page info               | 17236944 | 10041251095 |    1 |        0 | 02123200227321001 | Clark T Kent |         86.96 | 02/03/2018  | D                 |                 0 | false          |        400 | Request message format error |
+      #     | Pending Payment API with ACC45 Claim with garbage Page info         | 17236944 | 10041251095 | $    |        1 | 02123200227321001 | Clark T Kent |         86.96 | 02/03/2018  | D                 |                 0 | false          |        400 | Request message format error |
+      # when executed "#" as page, it will give status code as 200 (The fragment identifier introduced by a hash mark # is the optional last part of a URL for a document.)
+      #     | Pending Payment API with ACC45 Claim with garbage Page info         | 17236944 | 10041251095 | #    |        1 | 02123200227321001 | Clark T Kent |         86.96 | 02/03/2018  | D                 |                 0 | false          |        200 |                              |
+      | Pending Payment API with ACC45 Claim with user not exisiting in CSS | 16592966 | 10032319351 |    1 |       20 |                   | Li Qing Hu |               |             |                   |                 0 | false          |        404 | Pathway Case not found for incoming claim Id: 10032319351 |
+
+  @css @payments @regression
+  Scenario Outline: Retrieve pending payment LineItems information for a claim
+    Given Anna is ACC user "<userId>" with existing claimId "<claimId>"
+    When Anna get pending payment information from page number "<page>" till pagesize "<pageSize>"
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for pending payments
+    And Anna pending payment LineItems information is correct for the claim with "<accountCode>" "<bankAccountNumber>" "<categoryGroupDesc>" "<dependent>" "<payeeName>" "<paymentAmount>" "<paymentDate>" "<paymentMethod>" "<paymentStatus>" "<serviceDesc>" "<serviceDescCode>" "<statusDate>"
+
+    Examples: Anna checking on Pending Payments for a claim
+      | testDescription                                             | userId   | claimId     | page | pageSize | accountCode | bankAccountNumber | categoryGroupDesc | dependent | payeeName    | paymentAmount | paymentDate | paymentMethod | paymentStatus | serviceDesc                               | serviceDescCode | statusDate | statuscode | statusmessage |
+      | Pending Payment API with ACC45 Claim with LineItems details | 17236944 | 10041251095 |    1 |       50 |        4140 | 02123200227321001 | Social            |           | Clark T Kent |        124.23 | 02/03/2018  | D             |             0 | CSM - Home and Community Support Services |            1501 | 04/12/2017 |        200 |               |
+
+  #| Pending Payment API weeklyCompOnly as True with LineItems details | 17240902 | 10041256394 |    1 |      200 |        9160 | 02123200227321011 |                   |           | Aqua A Man |       -259.67 | 03/12/2018  | D             |             0 | PAYE - Current Tax Year |             202 | 12/12/2017 |        200 |               |
+  @css @payments @regression
+  Scenario Outline: Retrieve pending payment Entitlements details information for a claim
+    Given Anna is ACC user "<userId>" with existing claimId "<claimId>"
+    When Anna get pending payment information from page number "<page>" till pagesize "<pageSize>"
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for pending payments
+    And Anna pending payment Entitlement Details information is correct for the claim with "<categorisedAsWeeklyComp>" "<entitlementCategoryCode>" "<entitlementSubType>" "<entitlementType>" "<entitlementTypeDesc>" "<payAdviceDesc>"
+
+    Examples: Anna checking on Pending Payments for a claim
+      | testDescription                                           | userId   | claimId     | page | pageSize | categorisedAsWeeklyComp | entitlementCategoryCode | entitlementSubType | entitlementType        | entitlementTypeDesc                       | payAdviceDesc                  | statuscode | statusmessage |
+      | Pending Payment API with ACC45 Claim Entitlements Details | 17236944 | 10041251095 |    1 |       50 | false                   | CSM                     | HCSS               | Client self management | CSM - Home and Community Support Services | CSM - Home & Community Support |        200 |               |
+      #| Pending Payment API weeklyCompOnly as True Entitlements Details | 17240902 | 10041256394 |    1 |      200 | true                    | WC                      | Normal             | LT                     | WC - LT - Fit For Selected Work           | Weekly Compensation            |        200 |               |

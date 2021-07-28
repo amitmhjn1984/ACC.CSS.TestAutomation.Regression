@@ -1,0 +1,15 @@
+Feature: Retrieve user pending Support information; Service  is UP and RUNNING - GET /api/v1/{userId}/claims/{claimId}/supports/pending
+  
+  		Actor:Anna is existing ACC client who has requested for support
+
+  @css @support @smoke @regression
+  Scenario Outline: Retrieve list of pending support
+    Given Anna is ACC client "<userId>" who want to get the list of her pending support for "<claimId>"
+    When Anna get list of pending support list
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" pending support
+    And Anna pending support list is correct
+
+    Examples: Anna checking on User contact service
+      | userId   | claimId     | statuscode | statusmessage |
+      #| 17118411 | 10039549514 |        200 |               |
+      | Z11111   | 10039549514 |        401 |               |

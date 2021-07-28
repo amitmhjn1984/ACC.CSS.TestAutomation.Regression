@@ -1,0 +1,145 @@
+package com.acc.regression.users;
+
+import java.net.URLEncoder;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+
+import com.acc.regression.InitializeTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.restassured.RestAssured;
+import com.jayway.restassured.response.Response;
+import com.jayway.restassured.specification.RequestSpecification;
+
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+import org.junit.Assert;
+import static com.jayway.restassured.RestAssured.given;
+import static io.restassured.path.json.JsonPath.from;
+
+
+
+    @SuppressWarnings("unchecked")
+    public class UserInvite extends InitializeTest {
+    	String endpoint=null;
+    	String userId= null;
+        JSONObject emailJSON = new JSONObject();
+
+        Response postInviteResponse;
+        String dbPartyId;
+		int totaldbCountBeforePOST = 0;
+		int totaldbCountAfterPOST = 0;
+        Statement selStmt = null;
+        ResultSet resultSet = null;
+        
+        @Given("^ACC select Anna to invite to use MyACC portal \"([^\"]*)\" on \"([^\"]*)\" with \"([^\"]*)\"$")
+        public void acc_select_Anna_to_invite_to_use_MyACC_portal_on_with(String RequestType, String endpoint, String testDescription) throws Throwable {
+           this.endpoint = endpoint;
+           
+
+        }
+
+        
+        @When("^Anna got \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" to join CSS$")
+        public void anna_got_to_join_CSS(String dateOBrith, String emailText, String name, String partyId) throws Throwable {
+        	this.dbPartyId = partyId;
+        	
+        	emailJSON.put("dateOfBirth", dateOBrith);
+        	emailJSON.put("email", emailText);
+        	emailJSON.put("name", name);
+        	emailJSON.put("partyId", partyId);
+        	
+            ObjectMapper mapper = new ObjectMapper();
+            System.out.println("This is the post body");
+            System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(emailJSON));
+             
+//            this.totaldbCountBeforePOST =  getPostValue();
+            
+             postInviteResponse = 	given().
+            		 					//proxy("webproxy.ds.acc.co.nz", 8080).
+					            		relaxedHTTPSValidation().
+					            		urlEncodingEnabled(false).
+					            		contentType("application/json").
+					            		body(emailJSON).
+					            	when().
+					            		post(this.endpoint);
+             
+             //System.out.println(putAccountInformationResponse.jsonPath().prettyPrint());
+             if (postInviteResponse.statusCode() != 200) {
+             	System.out.println("Unable to update the account information Status Code--->"+ postInviteResponse.statusCode());
+             }
+        }
+        
+
+        @Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" for invitation$")
+        public void Anna_should_see_the_request_returning_with(int expectedstatuscode, String expectedStatusMessage) throws Throwable {
+        	
+        	System.out.println("Returned Message - " + postInviteResponse.jsonPath().prettyPrint());
+ 
+            Assert.assertEquals(expectedstatuscode, postInviteResponse.statusCode());
+            if(postInviteResponse.statusCode() !=200){
+                System.out.println("Put Account status message - " +postInviteResponse.body().jsonPath().get("message"));
+                Assert.assertTrue(postInviteResponse.body().jsonPath().get("message").toString().contains(expectedStatusMessage));
+            }
+
+
+            if(postInviteResponse.statusCode()==200){
+            	this.totaldbCountAfterPOST= getPostValue();
+            	Assert.assertEquals(this.totaldbCountAfterPOST, 1);
+            }
+            
+            
+        }
+
+
+		private int getPostValue() throws Exception {
+			PreparedStatement statement;
+			Connection connection = setup();
+			int totalDBCount = 0;
+
+	        //int i = 1;
+	        try {
+	            //selStmt = connection.createStatement();
+	            //resultSet = selStmt.executeQuery("select * from INVITE where email =" +this.dbEmail);
+	            statement =connection.prepareStatement("select * from CSS_INVITE where party_id = ? ");
+	            statement.setString(1, this.dbPartyId);
+	            resultSet = statement.executeQuery();
+	           
+	            if (resultSet != null) {
+	                while (resultSet.next()) {
+	                	totalDBCount = resultSet.getRow();
+//	                    System.out.println("Total invitation count -->"+total);
+	                }
+	            }
+	        } catch (SQLException sql) {
+	            System.out.println("Exception while getting total number of invitation code");
+	            System.out.print(sql.getMessage());
+	            if (resultSet != null) {
+	                resultSet.close();
+	            }
+	            //selStmt.close();
+	            connection.rollback();
+	            System.out.println("Stack: " + sql.getStackTrace().toString());
+	        } finally {
+	            if (resultSet != null) {
+	                resultSet.close();
+	            }
+	            //selStmt.close();
+	            connection.close();
+	        }
+	        return totalDBCount;
+			
+		}
+ }

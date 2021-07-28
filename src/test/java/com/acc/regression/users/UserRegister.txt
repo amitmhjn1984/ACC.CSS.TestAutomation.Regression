@@ -1,0 +1,81 @@
+package com.acc.regression.users;
+
+import org.json.simple.JSONObject;
+
+import com.acc.regression.InitializeTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.restassured.response.Response;
+
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+import org.junit.Assert;
+import static com.jayway.restassured.RestAssured.given;
+
+
+
+    @SuppressWarnings("unchecked")
+    public class UserRegister extends InitializeTest {
+    	String endpoint=null;
+    	String userId= null;
+        JSONObject register = new JSONObject();
+
+        Response postRegisterResponse;
+
+
+        @Given("^Anna register her details MyACC portal \"([^\"]*)\" on \"([^\"]*)\"$")
+        public void acc_select_Anna_to_invite_to_use_MyACC_portal_on(String RequestType, String endpoint) throws Throwable {
+           this.endpoint = endpoint;
+
+        }
+
+        @When("^Anna provide registration details \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"  to join CSS$")
+        public void anna_provide_registration_details_to_join_CSS(String confirmDeclaration, String dateofBirth, String email, String id, String password, String uniqueCode) throws Throwable {
+        	
+        	
+        	register.put("confirmDeclaration", confirmDeclaration);
+        	register.put("dateofBirth", dateofBirth);
+        	register.put("email", email);
+        	register.put("id", id);
+        	register.put("password", password);
+        	register.put("uniqueCode", uniqueCode);
+
+        	
+        	
+            ObjectMapper mapper = new ObjectMapper();
+            System.out.println("This is the post body");
+            System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(register));
+             
+             
+             postRegisterResponse = 	given().
+            		 								proxy("webproxy.ds.acc.co.nz", 8080).
+					            		 			relaxedHTTPSValidation().
+					            		 			urlEncodingEnabled(false).
+					            		 			contentType("application/json").
+					            		 			body(register).
+					            		 		when().
+					            		 			post(this.endpoint);
+             
+             //System.out.println(putAccountInformationResponse.jsonPath().prettyPrint());
+             if (postRegisterResponse.statusCode() != 200) {
+             	System.out.println("Unable to register the user, Status Code--->"+ postRegisterResponse.statusCode());
+
+             }
+        }
+        
+
+        @Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" for register$")
+        public void Anna_should_see_the_request_returning_with(int expectedstatuscode, String expectedStatusMessage) throws Throwable {
+
+            System.out.println("Returned Status code for the request - " + postRegisterResponse.statusCode());
+ 
+            System.out.println("Put Account status message - " +postRegisterResponse.body().jsonPath().get("message"));
+            
+            Assert.assertTrue("UserAccount Service is Running fine", 
+                    expectedstatuscode == postRegisterResponse.statusCode());
+            
+
+           }
+     
+
+    }

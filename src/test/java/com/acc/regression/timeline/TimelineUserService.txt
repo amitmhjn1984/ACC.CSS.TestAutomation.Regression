@@ -1,0 +1,218 @@
+package com.acc.regression.timeline;
+
+import java.net.URLEncoder;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.restassured.RestAssured;
+import com.jayway.restassured.response.Response;
+import com.jayway.restassured.specification.RequestSenderOptions;
+import com.jayway.restassured.specification.RequestSpecification;
+
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+import org.junit.Assert;
+import static com.jayway.restassured.RestAssured.given;
+import static io.restassured.path.json.JsonPath.from;
+import com.acc.regression.*;
+
+
+    @SuppressWarnings("unchecked")
+
+public class TimelineUserService extends InitializeTest {
+	String endpoint = null;
+	String userId = null;
+	JSONArray timeline = new JSONArray();
+	String token=null;
+	int getResponseCount=0;
+	int totalElement=0;
+	int expectedPageSize=0;
+	String startDate;
+	String endDate;
+	int expectedPage=1;
+	int totalDBCount = 0;
+
+	boolean flagPassFail;
+
+	Response getTimelineInformationResponse;
+	Response postTimelineResponse;
+
+	// Anna is an existing ACC client with "<description>"
+	@Given("^Anna is ACC client with existing account \"([^\"]*)\" with \"([^\"]*)\"$")
+	public void anna_is_ACC_client_with_existing_account(String userId, String description) throws Throwable {
+		if (userId.trim().equals("")) {
+			GetUser user = new GetUser();
+			user.selectRandomUser();
+			this.userId = accUser;
+		} else {
+			this.userId = userId;
+			accUser = userId;
+		}
+		
+		GetJWT JWT = new GetJWT();
+		token = JWT.getToken(this.userId);
+
+	}
+
+	// Anna retrieve her timeline activities "<startDate>" "<endDate>" "<page>"
+	// "<pageSize>"
+	@When("^Anna retrieve her timeline activities \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void anna_retrieve_her_timeline_activities(String startDate, String endDate, String page, String pageSize)
+			throws Throwable {
+		
+		if (pageSize.matches(".*\\d+.*")) {
+			expectedPageSize = Integer.parseInt(pageSize);
+		} else {
+			expectedPageSize = 25;
+		}
+		this.startDate= startDate;
+		this.endDate= endDate;
+		
+		if (page.matches(".*\\d+.*")) {
+			expectedPage = Integer.parseInt(page);
+		} else {
+			expectedPage = 1;
+		}
+		
+		this.endpoint = "api/v1/" + this.userId + "/timeline";
+		System.out.println(this.endpoint + " --Endpoint");
+
+		getTimelineInformationResponse = given().
+											header("X-Authorization", token).
+											queryParam("startDate", startDate).
+											queryParam("endDate", endDate).
+											queryParam("page", page).
+											queryParam("pageSize", pageSize).
+											relaxedHTTPSValidation().
+											urlEncodingEnabled(false).
+											contentType("application/json").
+											when().
+											get(this.endpoint);
+
+		if ((getTimelineInformationResponse.statusCode() != 200)
+				|| (getTimelineInformationResponse.statusCode() == 404)) {
+			System.out.println("Unable to get the timeline information for UserId--->" + this.userId);
+			System.out.println("Status Code--->" + getTimelineInformationResponse.statusCode());
+
+		} else
+			setTimelineInformation();
+
+	}
+
+	// Then Anna should see the request returning '<statuscode>' with
+	// "<statusmessage>" for timeline 
+	@Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" for timeline$")
+	public void Anna_should_see_the_request_returning_with_for_timeline(int expectedstatuscode,
+			String expectedStatusMessage) throws Throwable {
+
+		Assert.assertTrue("Timeline Service is NOT Running fine",
+				expectedstatuscode == getTimelineInformationResponse.statusCode());
+		if(getTimelineInformationResponse.statusCode() !=200){
+			System.out.println("message : "+getTimelineInformationResponse.asString());
+			 Assert.assertEquals(expectedStatusMessage,
+					 getTimelineInformationResponse.body().jsonPath().get("message"));
+		}
+		
+	}
+
+	// / And Anna is able to view all her timeline activities
+	@Then("^Anna is able to view all her timeline activities$")
+	public void anna_is_able_to_view_her_timeline_activities() throws Throwable {
+		if (getTimelineInformationResponse.statusCode() == 200) {
+			ArrayList timelineJsonarray = null;
+			PreparedStatement statement;
+			Connection connection = setup();
+			
+			ResultSet resultSet = null;
+			JSONArray networkdb = new JSONArray();
+			//ResultSetMetaData rsmd = resultSet.getMetaData();
+
+			try {
+				statement = connection.prepareStatement("select * from CSS_TIMELINE_ACTIVITIES where USER_ID = ? and LAST_UPDATE_TIME between ? AND ? ");
+				statement.setString(1, this.userId);
+				statement.setString(2, this.startDate);
+				statement.setString(3, this.endDate);
+
+				resultSet = statement.executeQuery();
+
+				if (resultSet != null) {
+					while (resultSet.next()) {
+						totalDBCount = resultSet.getRow();
+						
+					}
+				}
+			} catch (SQLException sql) {
+				System.out.println("Exception while getting total number of invitation code");
+				System.out.print(sql.getMessage());
+				if (resultSet != null) {
+					resultSet.close();
+				}
+				connection.rollback();
+				System.out.println("Stack: " + sql.getStackTrace().toString());
+			} finally {
+				if (resultSet != null) {
+					resultSet.close();
+				}
+				connection.close();
+			}
+			Assert.assertEquals(totalElement, totalDBCount);
+
+			
+		int rowCount = (this.expectedPage-1) * this.expectedPageSize;
+
+		if (rowCount <= 0) {
+			rowCount = 1;
+		} else {
+			totalDBCount = totalDBCount - rowCount;
+			if(totalDBCount <= 0) {
+				totalDBCount = 0;
+			}
+		}
+		
+		
+		if (totalDBCount >= expectedPageSize) {
+			Assert.assertEquals(getResponseCount, expectedPageSize);
+
+		} else
+			Assert.assertEquals(getResponseCount, totalDBCount);
+
+	}
+		
+
+	}
+	
+    public void setTimelineInformation() throws ParseException{
+    	List<String> TimelineContent = new ArrayList();
+    	
+    	if (getTimelineInformationResponse.statusCode() != 404) {
+    		System.out.println(getTimelineInformationResponse.body().asString());
+    		System.out.println(getTimelineInformationResponse.body().jsonPath().getJsonObject("content"));
+			TimelineContent = getTimelineInformationResponse.body().jsonPath().getJsonObject("content");// path("list.size()");
+			getResponseCount = TimelineContent.size();
+			System.out.println(TimelineContent.size());
+			totalElement = getTimelineInformationResponse.body().jsonPath().getInt("totalElements");
+		}
+
+    	
+    }
+    
+
+
+}

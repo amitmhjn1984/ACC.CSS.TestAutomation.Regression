@@ -1,0 +1,59 @@
+Feature: Invite user to join client self service portal is UP and RUNNING - POST /api/v1/users/invite
+  			Actor: Anna is an existing ACC client.
+
+  @css @users @regression
+  Scenario Outline: Inviting user to Join CSS
+    Given ACC select Anna to invite to use MyACC portal "<RequestType>" on "<endpoint>" with "<Description>"
+    When Anna got "<dateOfBirth>" "<email>" "<name>" "<partyId>" to join CSS
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for invitation
+
+    Examples: Anna get the invite
+      | RequestType | endpoint             | Description                      | dateOfBirth | email                   | name       | partyId  | statuscode | statusmessage                |
+      | POST        | /api/v1/users/invite | Valid data                       | 1970-01-18  | Test.Echannel@acc.co.nz | CSS STATIC | 17198907 |        200 |                              |
+      | POST        | /api/v1/users/invite | Missing DOB                      |             | vanzylv@gmail.com       | Tester     | ACC12    |        400 | Request message format error |
+      | POST        | /api/v1/users/invite | Missing email address            | 1990-12-20  |                         | Tester     | ACC12    |        400 | Request message format error |
+      | POST        | /api/v1/users/invite | Missing name                     | 1990-12-20  | vanzylv@gmail.com       |            | ACC12    |        400 | Request message format error |
+      | POST        | /api/v1/users/invite | Missing partyId                  | 1990-12-20  | vanzylv@gmail.com       | Tester     |          |        400 | Request message format error |
+      | POST        | /api/v1/users/invite | Invalid date format in DOB       | 1990-12     | vanzylv@gmail.com       | Tester     | ACC12    |        400 | Can not parse date           |
+      | POST        | /api/v1/users/invite | Passing string in DOB            | Test        | vanzylv@gmail.com       | Tester     | ACC12    |        400 | Can not parse date           |
+      | POST        | /api/v1/users/invite | Invalid email format             | 1990-12-20  | A@b@c@example.com       | Tester     | ACC12    |        400 | Request message format error |
+      | POST        | /api/v1/users/invite | Name contains special Char       | 1990-12-20  | vanzylv@gmail.com.co.nz | Tes@@ter   | ACC12    |        400 | Request message format error |
+      | POST        | /api/v1/users/invite | PartyID contains special char    | 1990-12-20  | vanzylv@gmail.com.co.nz | Tes@@ter   | $        |        400 | Request message format error |
+      | POST        | /api/v1/users/invite | All fields contains special char | !           | @                       | '#'        | $        |        400 | Can not parse date           |
+
+
+  @css @users @smoke
+  Scenario Outline: Inviting user to Join CSS smoke test
+    Given ACC select Anna to invite to use MyACC portal "<RequestType>" on "<endpoint>" with "<Description>"
+    When Anna got "<dateOfBirth>" "<email>" "<name>" "<partyId>" to join CSS
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for invitation
+
+    Examples: Anna get the invite
+      | RequestType | endpoint             | Description                | dateOfBirth | email                                                                          | name       | partyId  | statuscode | statusmessage                |
+      | POST        | /api/v1/users/invite | Valid data                 | 1970-01-18  | Test.Echannel@acc.co.nz                                                        | CSS STATIC | 17198907 |        200 |                              |
+      | POST        | /api/v1/users/invite | Missing email address      | 1990-12-20  |                                                                                | Tester     | ACC12    |        400 | Request message format error |
+      | POST        | /api/v1/users/invite | Invalid email format       | 1990-12-20  | Abc.example.com                                                                | Tester     | ACC12    |        400 | Request message format error |
+      | POST        | /api/v1/users/invite | Invalid email format       | 1990-12-20  | 1234567890123456789012345678901234567890123456789012345678901234+x@example.com | Tester     | ACC12    |        400 | Request message format error |
+      | POST        | /api/v1/users/invite | Invalid email format       | 1990-12-20  | john..doe@example.com                                                          | Tester     | ACC12    |        400 | Request message format error |
+      | POST        | /api/v1/users/invite | Invalid date format in DOB | 1990-12     | vanzylv@gmail.com                                                              | Tester     | ACC12    |        400 | Can not parse date           |
+
+        @css @users @ignore
+  Scenario Outline: Inviting users to Join CSS which have multiple linked AC45 claims and/or multiple PI claims
+    Given ACC select Anna to invite to use MyACC portal "<RequestType>" on "<endpoint>" with "<Description>"
+    When Anna got "<dateOfBirth>" "<email>" "<name>" "<partyId>" to join CSS
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for invitation
+    
+# note: add this data to CI table before runing this for test   
+    #Examples: Anna get the invite
+      #| RequestType | endpoint             | Description                                                    | dateOfBirth | email                   | name                  | partyId  | statuscode | statusmessage |
+      #| POST        | /api/v1/users/invite | Valid test data 1                                              | 1991-06-11  | Test.Echannel@acc.co.nz | Mr Sam Mata           | J7528322 |        200 |               |
+      #| POST        | /api/v1/users/invite | Valid test data 2                                              | 1989-10-18  | Test.Echannel@acc.co.nz | Mr Neil Warnock       | 12236805 |        200 |               |
+      #| POST        | /api/v1/users/invite | Valid test data 3                                              | 1997-03-21  | Test.Echannel@acc.co.nz | Ms Eilis Doyle        | 10767743 |        200 |               |
+      #| POST        | /api/v1/users/invite | Valid test data 4                                              | 1999-02-12  | Test.Echannel@acc.co.nz | Mr Cyril Shortland    | S4997640 |        200 |               |
+      #| POST        | /api/v1/users/invite | Valid test data 5                                              | 1960-01-01  | Test.Echannel@acc.co.nz | Dr Tony Stark         | 17236943 |        200 |               |
+      #| POST        | /api/v1/users/invite | Valid test data 6                                              | 1903-01-01  | Test.Echannel@acc.co.nz | Clark Kent            | 17236944 |        200 |               |
+      #| POST        | /api/v1/users/invite | Valid test data 7 - has 3 linked ac45 w pi                     | 1951-01-10  | Test.Echannel@acc.co.nz | Mr Michael Goodwin    | Q4100868 |        200 |               |
+      #| POST        | /api/v1/users/invite | Valid test data 8 - has 2 linked ac45 w pi                     | 2005-03-24  | Test.Echannel@acc.co.nz | Master Harley Solomon | 17118411 |        200 |               |
+      #| POST        | /api/v1/users/invite | Valid test data 9 - has 2 linked ac45 w pi and 2 pi w no ac45  | 1958-06-27  | Test.Echannel@acc.co.nz | Mrs Morven Macinnes   | 17106944 |        200 |               |
+      #| POST        | /api/v1/users/invite | Valid test data 10 - has 1 linked ac45 w pi and 2 pi w no ac45 | 1988-04-17  | Test.Echannel@acc.co.nz | Ms Rachel Mariu       | V3028912 |        200 |               |
+      

@@ -1,0 +1,22 @@
+Feature: List of all the network contact associated with user, servie is UP and RUNNING - GET /api/v1/network
+  			  			
+  			Actor: Anna is existing ACC client with claims
+
+  @css @network @smoke @regression @amittest
+  Scenario Outline: Get the user network contact information
+    Given Anna is existing ACC client "<userId>", test description "<testDescription>"
+    When Anna get network contact information for a user
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for user network update
+    And Anna is able to view user network contact information "<claimNumber>" "<email>" "<name>" "<userId>"  "<type>" "<workingHoursDescription>" "<phoneNumber>"
+
+    Examples: Anna update on user network contact service
+      | testDescription                                                     | claimNumber | email                      | name                        | userId   | type         | workingHoursDescription             | phoneNumber  | statuscode | statusmessage        |
+      | Network with Case owner as Individual                               | 10041251049 | chris.fife@acc.co.nz       | Chris Fife                  | J7528322 | PEOPLE       |                                     | 07 859 8022  |        200 |                      |
+      | Network with Case owner as Individual with Default info             | 10041251049 |                            | ACC Helpline                | J7528322 | ACC_HELPLINE |                                     | 0800 222 175 |        200 |                      |
+      | Network with Case owner as NGCM Enabled Recovery                    | 10041250416 | enabledrecovery@acc.co.nz  | ACC Helpline                | 10886562 | ACC_HELPLINE | 8:30 am - 5:00 pm, Monday to Friday | 0800 222 173 |        200 |                      |
+      | Network with Case owner as NGCM                                     | 10041250418 |                            | ACC Helpline                | H1059157 | ACC_HELPLINE | 8:30 am - 5:00 pm, Monday to Friday | 0800 222 175 |        200 |                      |
+      | Network with Case owner as NGCM Actioned Cases                      | 10041250005 | enabledrecovery@acc.co.nz  | ACC Helpline                | G0507317 | ACC_HELPLINE | 8:30 am - 5:00 pm, Monday to Friday | 0800 222 173 |        200 |                      |
+      | Network with Case owner as Invalid User                             | 10041258394 |                            | ACC Helpline                | XXX45754 | DEPARTMENT   | 8:30 am - 5:00 pm, Monday to Friday | 0800 222 174 |        401 | Unauthorized         |
+      | Network with Case owner as NGCM Assosted Recovery                   | 10041250015 | assistedrecovery@acc.co.nz | ACC Helpline                | H6511261 | ACC_HELPLINE | 8:30 am - 5:00 pm, Monday to Friday | 0800 222 174 |        200 |                      |
+      | Network with Case owner as No User information                      | 10041258500 | assistedrecovery@acc.co.nz | ACC Helpline                |          | DEPARTMENT   | 8:30 am - 5:00 pm, Monday to Friday | 0800 222 174 |        404 | No message available |
+      | Network with Case owner as Department (NGCM Return to Independence) | 10041250013 |                            | NGCM Return to Independence | 17117468 | DEPARTMENT   | 7:00 am - 7:00 pm, Monday to Friday |              |        200 |                      |

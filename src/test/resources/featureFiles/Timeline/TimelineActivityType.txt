@@ -1,0 +1,22 @@
+Feature: Get list of activity that happen with a user, retrieve service is UP and RUNNING - GET /api/v1/{userId}/timeline
+  			
+  			Actor: Anna is an existing ACC client.
+
+  @css @timeline @smoke @regression 
+  Scenario Outline: Get user activity type for Timeline
+    Given Anna is ACC client with existing account "<userId>" with "<description>"
+    When Anna retrieve her timeline activity type "<activityType>" "<status>"
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for timeline activity type
+    And Anna is able to view timeline activity type
+
+    Examples: Anna creating timeline
+      | description        | userId   | activityType                    | status    | statuscode | statusmessage |
+      #| Get UPDATE Contact | 17118411 | SUPPORT_CHANGE_PERSONAL_DETAILS | COMPLETED |        200 |               |
+      | Get UPDATE Contact | 17118411 | SUPPORT_UPDATE_INJURY_DETAILS | COMPLETED |        200 |               |
+      # | Get support             | 17106944 | Support_Taxi_Card_Request     | CLOSE   |        200 |                              |
+      # | Activity does not exist | 17106944 | Test_CONTACT                  | ACTIVE  |        200 |                              |
+      # | User does not exist     |    12344 | Test_CONTACT                  | PENDING |        401 | Invalid Authorization header |
+      # | Get UPDATE account      | J7528322 | ACTION_UPDATE_ACCOUNT         | PENDING |        200 |                              |
+      # | Get UPDATE email        | J7528322 | ACTION_UPDATE_EMAIL_ADDRESS   | PENDING |        200 |                              |
+      # | Get UPDATE Contact      | J7528322 | ACTION_UPDATE_CONTACT_DETAILS | PENDING |        200 |                              |
+ 

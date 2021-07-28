@@ -1,0 +1,54 @@
+Feature: Verify unique code and date of birth service is UP and RUNNING - POST /api/v1/users/verify
+  			Actor: Anna is an existing ACC client wants to verify her credentials.
+
+  @css @users @regression
+  Scenario Outline: Verify CSS user unique code
+    Given Anna wants to verify MyACC portal credentials "<RequestType>" on "<endpoint>" with "<description>"
+    When Anna pass verify registration information "<code>" "<dateofBirth>" "<invalidateCode>"
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for verify registration
+
+    Examples: Anna send information to verify unique code information
+      | RequestType | endpoint             | description                                      | code        | dateofBirth | invalidateCode | statuscode | statusmessage                     |
+      | POST        | /api/v1/users/verify | Invalid Code                                     | aYnLniy1234 | 1990-12-25  | false          |        400 | Invalid code                      |
+      | POST        | /api/v1/users/verify | Invalid date of birth                            | ZGWkozF     | 1990-12     | false          |        400 | Can not deserialize value of type |
+      | POST        | /api/v1/users/verify | Invalid code is true                             | gXry8Dv000  | 1990-12-25  | true           |        400 | Invalid code                      |
+      | POST        | /api/v1/users/verify | code is not passed                               |             | 1990-12-25  | false          |        400 | Request message format error      |
+      | POST        | /api/v1/users/verify | date of birth is not passed                      | 7r0v80c     |             | false          |        400 | Request message format error      |
+      | POST        | /api/v1/users/verify | invalidate code is not passed                    | NL0DpG7     | 1990-12-25  |                |        400 | Invalid code                      |
+      | POST        | /api/v1/users/verify | invaliddate code and date of birth is not passed | NL0DpG7     |             |                |        400 | Request message format error      |
+      | POST        | /api/v1/users/verify | Valid data with invalidatecode false             | NL0DpG7     | 1980-01-25  | false          |        200 | Code Verified                     |
+      | POST        | /api/v1/users/verify | Valid data with invalidatecode true              | NL0DpG7     | 1980-01-25  | true           |        200 | Code Invalidated                  |
+      | POST        | /api/v1/users/verify | verify the user which is already verified        | NL0DpG7     | 1980-01-25  | true           |        400 | Invalid code                      |
+
+  @css @users @ignore
+  Scenario Outline: Verify CSS user unique code for test data
+    Given Anna wants to verify MyACC portal credentials "<RequestType>" on "<endpoint>" with "<description>"
+    When Anna pass verify registration information "<code>" "<dateofBirth>" "<invalidateCode>"
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for verify registration
+
+    Examples: Anna send information to verify unique code information
+      | RequestType | endpoint             | description                         | code    | dateofBirth | invalidateCode | statuscode | statusmessage |
+# test data for e73
+#      | POST        | /api/v1/users/verify | Valid data with invalidatecode true  | myfIxSW | 1991-06-11  | true | 200 | Code Verified |
+#      | POST        | /api/v1/users/verify | Valid data with invalidatecode true  | J5HCyxR | 1989-10-18  | true | 200 | Code Verified |
+#      | POST        | /api/v1/users/verify | Valid data with invalidatecode true  | giIOmKb | 1997-03-21  | true | 200 | Code Verified |
+#      | POST        | /api/v1/users/verify | Valid data with invalidatecode true  | dN2kdTF | 1999-02-12  | true | 200 | Code Verified |
+#      | POST        | /api/v1/users/verify | Valid data with invalidatecode true  | kRAsRDH | 1960-01-01  | true | 200 | Code Verified |
+#      | POST        | /api/v1/users/verify | Valid data with invalidatecode true  | CT2x1Bu | 1903-01-01  | true | 200 | Code Verified |
+#      | POST        | /api/v1/users/verify | Valid data with invalidatecode true  | 0ckBveI | 1951-01-10  | true | 200 | Code Verified |
+#      | POST        | /api/v1/users/verify | Valid data with invalidatecode true  | a2VhFTl | 2005-03-24  | true | 200 | Code Verified |
+#      | POST        | /api/v1/users/verify | Valid data with invalidatecode true  | Zvp7maZ | 1958-06-27  | true | 200 | Code Verified |
+#      | POST        | /api/v1/users/verify | Valid data with invalidatecode true  | HtMAxA2 | 1988-04-17  | true | 200 | Code Verified |
+
+  @css @users @smoke
+  Scenario Outline: Verify CSS user unique code for smoke test
+    Given Anna wants to verify MyACC portal credentials "<RequestType>" on "<endpoint>" with "<description>"
+    When Anna pass verify registration information "<code>" "<dateofBirth>" "<invalidateCode>"
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for verify registration
+
+    Examples: Anna send information to verify unique code information
+      | RequestType | endpoint             | description                          | code        | dateofBirth | invalidateCode | statuscode | statusmessage    |
+      | POST        | /api/v1/users/verify | Valid data with invalidatecode false | NL0DpG7     | 1980-01-25  | false          |        200 | Code Verified    |
+      | POST        | /api/v1/users/verify | Valid data with invalidatecode true  | NL0DpG7     | 1980-01-25  | true           |        200 | Code Invalidated |
+      | POST        | /api/v1/users/verify | Valid data with invalidatecode true  | NL0DpG7     | 1980-01-25  | true           |        400 | Invalid code     |
+      | POST        | /api/v1/users/verify | Invalid Code                         | aYnLniy1234 | 1990-12-25  | false          |        400 | Invalid code     |

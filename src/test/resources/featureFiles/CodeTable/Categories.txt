@@ -1,0 +1,12 @@
+Feature: Get the list of available code table categories service is UP and RUNNING - GET /api/v1/claims/code-tables/categories
+
+  @css @codetable @ignore
+  Scenario Outline: GET list of available code table categories
+    #Given Anna is ACC client with existing claims
+    When Anna get the list of code table  "<RequestType>" on "<endpoint>"
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for code table
+
+    #And   Anna view correct list of codes table categories information
+    Examples: Anna claim information
+      | RequestType | endpoint                             | statuscode | statusmessage |
+      | GET         | api/v1/claims/code-tables/categories |        200 |               |

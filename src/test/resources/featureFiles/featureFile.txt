@@ -1,0 +1,1 @@
+convert all the extension file to .feature

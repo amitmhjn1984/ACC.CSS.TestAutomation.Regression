@@ -1,0 +1,119 @@
+package com.acc.regression.support;
+
+import static com.jayway.restassured.RestAssured.given;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import org.junit.Assert;
+
+import com.acc.regression.GetJWT;
+import com.acc.regression.InitializeTest;
+import com.jayway.restassured.response.Response;
+
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+
+public class SupportPending extends InitializeTest  {
+	String endpoint= null;
+	Response getPendingSupportResponse;
+	String userId=null;
+	String claimId = null;
+	String token=null;
+	
+	
+	@Given("^Anna is ACC client \"([^\"]*)\" who want to get the list of her pending support for \"([^\"]*)\"$")
+	public void anna_is_ACC_client_who_want_to_get_the_list_of_her_pending_support_for(String userId, String claimId) throws Throwable {
+		this.userId = userId;
+		this.claimId= claimId;
+		
+		GetJWT JWT = new GetJWT();
+		token = JWT.getToken(this.userId);
+		
+		///api/v1/{userId}/claims/{claimId}/supports/pending
+		this.endpoint = "api/v1/"+ this.userId +"/claims/" +this.claimId+"/supports/pending";
+	}
+
+	@When("^Anna get list of pending support list$")
+	public void anna_get_list_of_pending_support_list() throws Throwable {
+		
+		
+		getPendingSupportResponse = 	given().
+											header("X-Authorization", token).
+											relaxedHTTPSValidation().
+											urlEncodingEnabled(false).
+											contentType("application/json").
+										when().
+											get(this.endpoint);
+		
+		System.out.println("<---Get Response--->");
+		System.out.println(getPendingSupportResponse.asString());
+		
+		if ((getPendingSupportResponse.statusCode() != 200)
+					|| (getPendingSupportResponse.statusCode() == 404)) {
+			System.out.println("Status Code--->" + getPendingSupportResponse.statusCode());
+		}
+
+	}
+	@Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" pending support$")
+	public void anna_should_see_the_request_returning_with_pending_support(int expectedstatuscode, String message) throws Throwable {
+		 System.out.println("Returned Status code for the request - " + getPendingSupportResponse.statusCode());
+	       // System.out.println("Put Account status message - " +putAddressInformationResponse.body().jsonPath().get("message"));
+	        
+	        Assert.assertTrue("Cliam-Pending Support get Service is NOT Running fine", 
+	                expectedstatuscode == getPendingSupportResponse.statusCode());
+	}
+	
+	@Then("^Anna pending support list is correct$")
+	public void anna_pending_support_list_is_correct() throws Throwable {
+		if(getPendingSupportResponse.statusCode()==200){
+			PreparedStatement statement;
+			Connection connection = setup();
+			int totalDBCount = 0;
+
+	        ResultSet resultSet = null;
+	        try {
+	            //statement =connection.prepareStatement("select * from CSS_TIMELINE_ACTIVITIES where USER_ID = ? and ACTIVITY_TYPE = ?");
+
+	        	statement =connection.prepareStatement("select count(*) as rowCounts from CSS_TIMELINE_ACTIVITIES	"
+	        			+ "where user_id = ? "
+	        			+ "and claim_id = ?	"
+	        			+ "and last_update_by = ?	"
+	        			+ "and ACTIVITY_TYPE like '%SUPPORT%' ");
+	            statement.setString(1, this.userId);
+	            statement.setString(2, this.claimId);
+	            statement.setString(3, this.userId);
+	            resultSet = statement.executeQuery();
+	           
+	            if (resultSet != null) {
+	                while (resultSet.next()) {
+	                	totalDBCount = resultSet.getInt("rowCounts");
+	                	
+	                }
+	            }
+	        } catch (SQLException sql) {
+	            System.out.println("Exception while getting total number of invitation code");
+	            System.out.print(sql.getMessage());
+	            if (resultSet != null) {
+	                resultSet.close();
+	            }
+	            connection.rollback();
+	            System.out.println("Stack: " + sql.getStackTrace().toString());
+	        } finally {
+	            if (resultSet != null) {
+	                resultSet.close();
+	            }
+	            connection.close();
+	        }
+	    	int responseCount = getPendingSupportResponse.body().path("list.size()");
+	    	Assert.assertEquals(responseCount, totalDBCount);
+			
+		}
+
+
+	}
+
+}

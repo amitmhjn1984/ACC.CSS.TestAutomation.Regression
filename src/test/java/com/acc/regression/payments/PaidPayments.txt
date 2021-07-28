@@ -1,0 +1,296 @@
+package com.acc.regression.payments;
+
+import static com.jayway.restassured.RestAssured.given;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.HashMap;
+import java.util.List;
+
+import org.json.simple.JSONObject;
+import org.junit.Assert;
+
+import com.acc.regression.CommonUtils;
+import com.acc.regression.GetJWT;
+import com.acc.regression.InitializeTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.restassured.response.Response;
+import com.sun.jersey.spi.inject.Errors;
+
+import bsh.org.objectweb.asm.Type;
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+import cucumber.api.java.it.Date;
+
+
+public class PaidPayments extends InitializeTest {
+	private Response getPaymentInformationResponse;
+
+	private String endpoint = null;
+	private String userId = null;
+	private String claimId = null;
+
+	private String startDate;
+	private String endDate;
+	private String page;
+	private String pageSize;
+
+	String token = null;
+	
+	@Given("^Anna is ACC user \"([^\"]*)\" with existing claim \"([^\"]*)\"$")
+	public void anna_is_ACC_user_with_existing_claim(String userId, String claimId) throws Throwable {
+
+		this.userId = userId;
+		this.claimId = claimId;
+		
+		GetJWT JWT = new GetJWT();
+		token = JWT.getToken(this.userId);
+		
+	}
+
+	// @When("^Anna get payment information from \"([^\"]*)\" to \"([^\"]*)\"$")
+	@When("^Anna get payment information from \"([^\"]*)\" to \"([^\"]*)\" with  page \"([^\"]*)\" and pagesize \"([^\"]*)\"$")
+	public void anna_get_payment_information_from_to(String startDate, String endDate, String page, String pageSize)
+			throws Throwable {
+
+		this.startDate = startDate;
+		this.endDate = endDate;
+		this.page = page;
+		this.pageSize = pageSize;
+
+		this.endpoint = "api/v1/users/" + this.userId + "/claims/" + this.claimId + "/payments/paid";
+		System.out.println("doing--->" + this.endpoint);
+
+		getPaymentInformationResponse = given().
+										header("X-Authorization", token).
+										queryParam("startDate", this.startDate).
+										queryParam("endDate", this.endDate).
+										queryParam("page", this.page).
+										queryParam("pageSize", this.pageSize).
+										relaxedHTTPSValidation().
+										urlEncodingEnabled(false).
+										contentType("application/json").when().
+										get(this.endpoint);
+		System.out.println("<---Get Response--->");
+		System.out.println(getPaymentInformationResponse.jsonPath().prettyPrint());
+		// System.out.println(getPaymentInformationResponse.asString());
+
+		if (getPaymentInformationResponse.statusCode() != 200) {
+			System.out.println("Status Code--->" + getPaymentInformationResponse.statusCode());
+		}
+	}
+
+	@Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" for paid payments$")
+	public void anna_should_see_the_request_returning_with_for_paid_payments(int expectedstatuscode,
+			String expectedMessage) throws Throwable {
+
+		System.out.println("Returned Status code for the request - " + getPaymentInformationResponse.statusCode());
+		// System.out.println("Put Account status message - "
+		// +getPaymentInformationResponse.body().jsonPath().get("message"));
+		System.out.println(getPaymentInformationResponse.getStatusLine());
+		System.out.println(getPaymentInformationResponse.asString());
+
+		Assert.assertTrue("Payment-Cliam get Service is NOT Running fine",
+				expectedstatuscode == getPaymentInformationResponse.statusCode());
+		
+
+		if (getPaymentInformationResponse.statusCode() != 200) {
+				Assert.assertTrue("Detailed Error message does not match", getPaymentInformationResponse.body().jsonPath().get("message").toString().contains(expectedMessage));
+		}		
+		
+		// TODO - we are not doing anything with the expectedMessage
+	}
+
+	// "<bankAccountNumber>" "<bankingDate>" "<chequeNumber>" "<id>"
+	// "<paymentAmount>" "<paymentDate>" "<paymentType>" "<payrollIssueId>"
+	// Swagger is missing transactionId at end - removed "<transactionId>" from last
+	// element above \"([^\"]*)\"
+	@Then("^Anna's paid payments information is for the claim is correct \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void anna_s_paid_payments_information_is_for_the_claim_is_correct(String expectedPaymentAmount,
+			String expectedBankingDate, String expectedPaymentDate, String expectedpaymentMethodCode,String expectedBankAccountNumber, String expectedChequeNumber, 
+			String expectedPaymentStatusCode, String expectedPayeeName
+	// String transactionId
+	) throws Throwable {
+
+		System.out.println("in --> anna_s_pending_payment_information_is_correct_for_the_claim");
+		if (getPaymentInformationResponse.statusCode() == 200) {
+
+			List<HashMap> paidPaymentMapList = getPaymentInformationResponse.jsonPath().getList("pastPaymentList");
+			// this HashMap contains both <Long,String> and <String,String>
+			
+			boolean flagFoundValidPaidPaymentRow = false;
+			StringBuilder sbAllPaidPaymentResults = new StringBuilder();
+
+			if (paidPaymentMapList != null && paidPaymentMapList.size() > 0) {
+				// we have a list of paidPayment (a map or paidPayment elements)
+				// paidPayment LIST is made up of [bodySide, code, description, effectiveFrom, effectiveTo, injurySite, level
+				
+				// need to look at each element in the list and see if all elements match
+				// if they do, we can stop the loop, if not, keep looking
+				// at the end of the loop, if we haven't matched all rows, then throw an assertion error
+				
+				int rowNum = 1;
+				for (HashMap <String, String> paidPaymentMap : paidPaymentMapList) {
+
+					// clear previous results string builder (used for info message)
+					sbPaidPaymentCurrentRowResults = new StringBuilder();
+					
+					sbPaidPaymentCurrentRowResults.append("\nPaidPayment Row ").append(rowNum).append(" of ").append(paidPaymentMapList.size());
+		
+					
+					// check our PaidPayment map data - this sets the flags 
+					// and populates sbPaidPaymentCurrentRowResults and then we add the content 
+					// of sbPaidPaymentCurrentRowResults to the sbAllPaidPaymentResults below (for summary of all rows) 
+					
+					String con_expectedBankingDate = String.valueOf(CommonUtils.ConvertStrDateToJavaEpoch(expectedBankingDate));
+					validBankingDate = checkPaidPaymentValue("bankingDate",con_expectedBankingDate, paidPaymentMap);
+
+					validPaymethodMethodCode = checkPaidPaymentValue("paymentMethodCode", expectedpaymentMethodCode, paidPaymentMap);
+					validPaymentStatusCode = checkPaidPaymentValue("paymentStatusCode", expectedPaymentStatusCode, paidPaymentMap);
+					validPayeeName = checkPaidPaymentValue("payeeName", expectedPayeeName, paidPaymentMap);				
+					validBankAccountNumber = checkPaidPaymentValue("bankAccountNumber", expectedBankAccountNumber, paidPaymentMap);
+
+					String con_expectedPaymentDate = String.valueOf(CommonUtils.ConvertStrDateToJavaEpoch(expectedPaymentDate));
+					validPaymentDate  = checkPaidPaymentValue("paymentDate", con_expectedPaymentDate, paidPaymentMap);
+					
+					validChequeNumber = checkPaidPaymentValue("chequeNumber", expectedChequeNumber, paidPaymentMap);
+					validPaymentAmount  = checkPaidPaymentValue("paymentAmount", expectedPaymentAmount, paidPaymentMap);
+					
+					// check if all flags are valid 
+					if (validBankingDate && validPaymethodMethodCode && validPaymentStatusCode && validPayeeName && validBankAccountNumber && validPaymentDate && validChequeNumber && validPaymentAmount) {
+						flagFoundValidPaidPaymentRow = true;
+						// success - matching paidPayments row
+						System.out.println("found valid row - stopping");
+						sbPaidPaymentCurrentRowResults.insert(0, "\nValid PaidPayments row (" + rowNum + ")");
+						// in either case, add the current paidPayments data text to our full list for all rows
+						sbAllPaidPaymentResults.append(sbPaidPaymentCurrentRowResults);
+						sbAllPaidPaymentResults.append("\nNot looking for additional rows");
+						// we found our matching row - stop looking
+						break;
+					} else {
+						// not a matching paidPayments row.  need to keep looking if there is more data
+						System.out.println("not a valid row - continuing if more records");
+						sbPaidPaymentCurrentRowResults.insert(0, "\nInvalid PaidPayments row (" + rowNum + ")");
+						// in either case, add the current paidPayments data text to our full list for all rows
+						sbAllPaidPaymentResults.append(sbPaidPaymentCurrentRowResults);
+					}
+
+					rowNum++;
+					
+				} // end of for loop
+
+				System.out.println("done looking at Paid Payment");
+
+			} else {
+				System.out.println("no Paid Payment to check");
+				
+				//Using Empty map to check, comparing to expected values to ensure they are empty
+				HashMap paidPaymentMap = new HashMap();
+
+				validBankingDate = checkPaidPaymentValue("bankingDate", expectedBankingDate, paidPaymentMap);
+				validPaymethodMethodCode = checkPaidPaymentValue("paymentMethodCode", expectedpaymentMethodCode, paidPaymentMap);
+				validPaymentStatusCode = checkPaidPaymentValue("paymentStatusCode", expectedPaymentStatusCode, paidPaymentMap);
+				validPayeeName = checkPaidPaymentValue("payeeName", expectedPayeeName, paidPaymentMap);				
+				validBankAccountNumber = checkPaidPaymentValue("bankAccountNumber", expectedBankAccountNumber, paidPaymentMap);
+				validPaymentDate  = checkPaidPaymentValue("paymentDate", expectedPaymentDate, paidPaymentMap);
+				validChequeNumber = checkPaidPaymentValue("chequeNumber", expectedChequeNumber, paidPaymentMap);
+				validPaymentAmount  = checkPaidPaymentValue("paymentAmount", expectedPaymentAmount, paidPaymentMap);
+				
+				// check if all flags are valid 
+				if (validBankingDate && validPaymethodMethodCode && validPaymentStatusCode && validPayeeName && validBankAccountNumber && validPaymentDate && validChequeNumber && validPaymentAmount) {
+					flagFoundValidPaidPaymentRow = true;
+					// success - matching paidPayments row
+					sbPaidPaymentCurrentRowResults.insert(0, "\nValid (Empty) PaidPayments row");
+				} else {
+					
+					// not a matching paidPayments row.  need to keep looking if there is more data
+					sbPaidPaymentCurrentRowResults.insert(0, "\nInvalid (Empty) PaidPayments row");
+				}
+				// in either case, add the current paidPayments data text to our full list for all rows
+				sbAllPaidPaymentResults.append(sbPaidPaymentCurrentRowResults);
+				sbAllPaidPaymentResults.append("\n<Not looking for additional rows as this is am empty paidPayments result>");
+				
+			} // end else (checking expected when we have empty paidPayments data)
+
+			// print what we found for PaidPayment data - it may be good or bad at this point
+			System.out.println(sbAllPaidPaymentResults.toString());
+
+			// throw an error if it's bad 
+			Assert.assertTrue("PaidPayment Data is not as expected:\n<" + sbAllPaidPaymentResults.toString() + ">", flagFoundValidPaidPaymentRow);
+
+		}
+		//  else not 200 return code, don't process data
+	}
+	
+	// flags for the PaidPayment codes
+	boolean validBankingDate = false;
+	boolean validPaymethodMethodCode = false;
+	boolean validPaymentStatusCode = false;
+	boolean validPayeeName = false;
+	boolean validBankAccountNumber = false;
+	boolean validPaymentDate = false;
+	boolean validPaymentAmount = false;
+	boolean validChequeNumber = false;
+	boolean validId = false;
+
+	StringBuilder sbPaidPaymentCurrentRowResults = new StringBuilder();
+	String result = null;
+	String unexpected = " is not as expected --> expected: (";
+
+	/**
+	 * private convenience method to look for data in the provided map
+	 * when our test data contains a list of maps e.g. Paid Payment
+	 * as we check each row, we add to the 	 
+	 * 
+	 * the result of the check is stored in sbPaidPaymentCurrentRowResults
+	 * 
+	 * calling code will then add this sb data to the sbAllPaidPaymentResults which combines results from all rows 
+	 * 
+	 * 
+	 * @param paidPaymentString
+	 * @param expected
+	 * @param paidPaymentMap
+	 * @return
+	 */
+	private boolean checkPaidPaymentValue(String paidPaymentString, String expected, HashMap paidPaymentMap) {
+
+		//type casting to String to handle data. 
+		String sActualValue = String.valueOf(paidPaymentMap.get(paidPaymentString));
+		StringBuilder sb = new StringBuilder();
+
+		// dealing with null to and from dates
+		if (sActualValue == null || 
+				sActualValue.equals("null")) {
+			//System.out.println("changing null to empty");
+			sActualValue = "";			
+		}
+
+		if (!sActualValue.equals(expected)) { 
+			result =  sb.append("\n\t\tPaidPayment ").append(paidPaymentString)
+					.append(unexpected)
+					.append(expected).append(") actual: (")
+					.append(sActualValue).append(")").toString();
+		} else {
+			result =  sb.append("\n\t\tPaidPayment is as expected: ")
+					.append(paidPaymentString).append("--> (").append(expected).append(")").toString();
+		}
+
+		// the list of Paid Payment may contain multiple rows
+		// this list contains all elements from the PaidPayment map for the current row 
+		sbPaidPaymentCurrentRowResults.append(result);
+		
+		if (!result.contains(unexpected)) {
+			// valid code
+			return true;
+		}
+		// invalid code
+		return false;
+	}
+	
+	
+
+	
+	
+	
+}

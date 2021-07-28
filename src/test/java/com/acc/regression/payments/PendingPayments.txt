@@ -1,0 +1,540 @@
+package com.acc.regression.payments;
+
+import static com.jayway.restassured.RestAssured.given;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import org.junit.Assert;
+import org.openqa.selenium.remote.Command;
+
+import com.acc.regression.CommonUtils;
+import com.acc.regression.GetJWT;
+import com.acc.regression.InitializeTest;
+import com.jayway.restassured.response.Response;
+
+import java.util.HashMap;
+import java.util.List;
+
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+
+public class PendingPayments extends InitializeTest {
+
+	String endpoint = null;
+	String userId = null;
+	String claimId = null;
+	Response getPendingPaymentsInformationResponse;
+	String token=null;
+	String page = null;
+	String pageSize = null;
+	
+	boolean flagFoundValidPendingPaymentRow = false;
+	StringBuilder sbAllPendingPaymentResults = new StringBuilder();
+
+  //String host = "imap.mail.outlook.com";// change accordingly
+	
+ // String mailStoreType = "imaps";
+
+  String host = "WLGCasArray.ds.acc.co.nz";
+  String username = "amit.mahajan@acc.co.nz";// change accordingly
+  String password = "****";// change accordingly
+	
+	@Given("^Anna is ACC user \"([^\"]*)\" with existing claimId \"([^\"]*)\"$")
+	public void anna_is_ACC_user_with_existing_claimId(String userId, String claimId) throws Throwable {
+		this.userId = userId;
+		this.claimId = claimId;
+		
+		GetJWT JWT = new GetJWT();
+		token = JWT.getToken(this.userId);
+
+		//CommonUtils.checkRegistrationEmail(host,  username, password);
+
+	}
+
+	@When("^Anna get pending payment information from page number \"([^\"]*)\" till pagesize \"([^\"]*)\"$")
+	public void anna_get_pending_payment_information_from_page_number_till_pagesize(String page, String pageSize) throws Throwable {
+
+		this.page = page;
+		this.pageSize = pageSize;
+
+		this.endpoint = "api/v1/users/" + this.userId + "/claims/" + this.claimId + "/payments/pending";
+		System.out.println("doing--->" + this.endpoint);		
+		
+		
+		getPendingPaymentsInformationResponse = given().
+				header("X-Authorization", token).
+				queryParam("page", this.page).
+				queryParam("pageSize", this.pageSize).
+				relaxedHTTPSValidation().
+				urlEncodingEnabled(false).
+				contentType("application/json").
+				when().	get(this.endpoint);
+
+		System.out.println("<====Get Response====>");
+		System.out.println(getPendingPaymentsInformationResponse.jsonPath().prettyPrint());		
+		
+		if (getPendingPaymentsInformationResponse.statusCode() != 200) {
+			System.out.println("Received Status Code--->" 
+				+ getPendingPaymentsInformationResponse.statusCode());
+		}
+	}
+
+
+	@Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" for pending payments$")
+	public void anna_should_see_the_request_returning_with_for_pending_payments(int expectedstatuscode, String message) throws Throwable {
+
+		System.out.println("Returned Status code for the request - " + getPendingPaymentsInformationResponse.statusCode());
+
+		System.out.println(getPendingPaymentsInformationResponse.getStatusLine());
+		System.out.println(getPendingPaymentsInformationResponse.asString());
+
+		Assert.assertTrue("Claim-Pending Support get Service is NOT Running fine: expected " 
+		+ expectedstatuscode + ", got: " + getPendingPaymentsInformationResponse.statusCode(), 
+                expectedstatuscode == getPendingPaymentsInformationResponse.statusCode());
+
+	}
+	
+
+	
+	// Anna Getting correct Cash Information from GET Pending Payment API
+	@Then("^Anna pending payment cash information is correct for the claim \"([^\\\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void anna_pending_payment_cash_information_is_correct_for_the_claim(String expectedBankAccountNumber, String expectedPayeeName, String expectedPaymentAmount, String expectedPaymentDate, String expectedPaymentMethodCode, String expectedPaymentStatusCode, String expectedWeeklyCompOnly) throws Throwable {
+
+		System.out.println("===========================================================================");
+		System.out.println("in --> anna_pending_payment_cash_information_is_correct_for_the_claim");		
+		
+		StringBuilder sbAllPendingPaymentResults = new StringBuilder();
+			
+			if (getPendingPaymentsInformationResponse.statusCode() == 200) {
+
+				List<HashMap> pendingPaymentMapList = getPendingPaymentsInformationResponse.jsonPath().getList("futurePaymentList");
+				// this HashMap contains both <Long,String> and <String,String>
+
+				if (pendingPaymentMapList != null && pendingPaymentMapList.size() > 0) {
+					int rowNum = 1;
+					for (HashMap <String, String> pendingPaymentMap : pendingPaymentMapList) {
+
+						// clear previous results string builder (used for info message)
+						sbPendingPaymentCurrentRowResults = new StringBuilder();
+						
+						sbPendingPaymentCurrentRowResults.append("\nPendingPayment Row ").append(rowNum).append(" of ").append(pendingPaymentMapList.size());
+			
+						
+						// check our PendingPayment map data - this sets the flags 
+						// and populates sbPendingPaymentCurrentRowResults and then we add the content 
+						// of sbPendingPaymentCurrentRowResults to the sbAllPendingPaymentResults below (for summary of all rows) 
+						
+
+						validBankAccountNumber = checkPendingPaymentValue("bankAccountNumber", expectedBankAccountNumber, pendingPaymentMap);
+						validPayeeName = checkPendingPaymentValue("payeeName", expectedPayeeName, pendingPaymentMap);
+						validPaymentAmount = checkPendingPaymentValue("paymentAmount", expectedPaymentAmount, pendingPaymentMap);
+
+						String con_PaymentDate = String.valueOf(CommonUtils.ConvertStrDateToJavaEpoch(expectedPaymentDate));
+						
+						validpaymentDate = checkPendingPaymentValue("paymentDate",con_PaymentDate, pendingPaymentMap);
+						
+						validpaymentMethodCode = checkPendingPaymentValue("paymentMethodCode", expectedPaymentMethodCode, pendingPaymentMap);
+						validPaymentStatusCode = checkPendingPaymentValue("paymentStatusCode", expectedPaymentStatusCode, pendingPaymentMap);
+						validWeeklyCompOnly = checkPendingPaymentValue("weeklyCompOnly", expectedWeeklyCompOnly, pendingPaymentMap);				
+						
+						// check if all flags are valid 
+						if (validBankAccountNumber && validPayeeName && validPaymentAmount && validpaymentDate && validpaymentMethodCode && validPaymentStatusCode && validWeeklyCompOnly) {
+							flagFoundValidPendingPaymentRow = true;
+							// success - matching pendingPayments row
+							System.out.println("found valid row - stopping");
+							sbPendingPaymentCurrentRowResults.insert(0, "\nValid PendingPayments row (" + rowNum + ")");
+							sbAllPendingPaymentResults.append(sbPendingPaymentCurrentRowResults);
+							sbAllPendingPaymentResults.append("\n-------------------------------");
+							sbAllPendingPaymentResults.append("\nNot looking for additional rows");
+							sbAllPendingPaymentResults.append("\n-------------------------------");							
+							
+							break;
+						} else {
+							System.out.println("not a valid row - continuing if more records");
+							sbPendingPaymentCurrentRowResults.insert(0, "\nInvalid PendingPayments row (" + rowNum + ")");
+							sbAllPendingPaymentResults.append(sbPendingPaymentCurrentRowResults);
+						}
+						rowNum++;
+					} 
+
+					System.out.println("done looking at Pending Payment");
+
+				} else {
+					System.out.println("no Pending Payment to check");
+					
+					//Using Empty map to check, comparing to expected values to ensure they are empty
+					HashMap pendingPaymentMap = new HashMap();
+
+					validBankAccountNumber = checkPendingPaymentValue("bankAccountNumber", expectedBankAccountNumber, pendingPaymentMap);
+					validPayeeName = checkPendingPaymentValue("payeeName", expectedPayeeName, pendingPaymentMap);
+					validPaymentAmount = checkPendingPaymentValue("paymentAmount", expectedPaymentAmount, pendingPaymentMap);
+
+					String con_PaymentDate = String.valueOf(CommonUtils.ConvertStrDateToJavaEpoch(expectedPaymentDate));
+					validpaymentDate = checkPendingPaymentValue("paymentDate",con_PaymentDate, pendingPaymentMap);
+					validpaymentMethodCode = checkPendingPaymentValue("paymentMethodCode", expectedPaymentMethodCode, pendingPaymentMap);
+					validPaymentStatusCode = checkPendingPaymentValue("paymentStatusCode", expectedPaymentStatusCode, pendingPaymentMap);
+					validWeeklyCompOnly = checkPendingPaymentValue("weeklyCompOnly", expectedWeeklyCompOnly, pendingPaymentMap);				
+					
+					// check if all flags are valid 
+					if (validBankAccountNumber && validPayeeName && validPaymentAmount && validpaymentDate && validpaymentMethodCode && validPaymentStatusCode && validWeeklyCompOnly) {
+						flagFoundValidPendingPaymentRow = true;
+						// success - matching pendingPayments row
+						sbPendingPaymentCurrentRowResults.insert(0, "\nValid (Empty) PendingPayments row");
+					} else {
+						
+						// not a matching pendingPayments row.  need to keep looking if there is more data
+						sbPendingPaymentCurrentRowResults.insert(0, "\nInvalid (Empty) PendingPayments row");
+					}
+					// in either case, add the current pendingPayments data text to our full list for all rows
+					sbAllPendingPaymentResults.append(sbPendingPaymentCurrentRowResults);
+					sbAllPendingPaymentResults.append("\n<Not looking for additional rows as this is am empty pendingPayments result>");
+					
+				} // end else (checking expected when we have empty pendingPayments data)
+
+				// print what we found for PendingPayment data - it may be good or bad at this point
+				System.out.println(sbAllPendingPaymentResults.toString());
+
+				// throw an error if it's bad 
+				Assert.assertTrue("PendingPayment Data is not as expected:\n<" + sbAllPendingPaymentResults.toString() + ">", flagFoundValidPendingPaymentRow);
+
+			}
+		//  else not 200 return code, don't process data
+	}
+
+		
+	// Anna Getting correct LineItems related Information from GET Pending Payment API	
+	@Then("^Anna pending payment LineItems information is correct for the claim with \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void anna_pending_payment_LineItems_information_is_correct_for_the_claim_with(String expected_accountCode,  String expected_bankAccountNumber, String expected_categoryGroupDesc, String expected_dependent, String expected_payeeName, String expected_paymentAmount,String expected_paymentDate, String expected_paymentMethod, String expected_paymentStatus, String expected_serviceDesc, String expected_serviceDescCode, String expected_statusDate) throws Throwable {
+		System.out.println("===========================================================================");
+		System.out.println("in --> anna_pending_payment_LineItems_information_is_correct_for_the_claim");
+		
+		List<HashMap> pendingPaymentLineItemsMapList = null	;
+		boolean flagFoundValidParentPendingPaymentRow = false;
+
+		StringBuilder sbAllPendingPaymentResults = new StringBuilder();
+		
+		if (getPendingPaymentsInformationResponse.statusCode() == 200) {
+			
+			int futurePayListsize = getPendingPaymentsInformationResponse.jsonPath().getList("futurePaymentList").size();
+			
+		  for (int i = 0; i < futurePayListsize; i++) {
+			 pendingPaymentLineItemsMapList = getPendingPaymentsInformationResponse.jsonPath().getList("futurePaymentList["+i+"].lineItems");
+
+			 sbPendingPaymentCurrentRowResults = new StringBuilder();
+			 
+			if (pendingPaymentLineItemsMapList != null && pendingPaymentLineItemsMapList.size() > 0) {
+				// need to look at each element in the list and see if all elements match
+				// if they do, we can stop the loop, if not, keep looking
+				// at the end of the loop, if we haven't matched all rows, then throw an assertion error
+				
+				//sbPendingPaymentCurrentRowResults = new StringBuilder();
+				int rowNum = 1;
+				
+				for (HashMap <String, String> pendingPaymentLineItemsMap : pendingPaymentLineItemsMapList) {
+					
+					//sbPendingPaymentCurrentRowResults = new StringBuilder();
+					
+					sbPendingPaymentCurrentRowResults.append("\nPendingPayment Row ").append(rowNum).append(" of ").append(pendingPaymentLineItemsMapList.size());
+					
+					String con_expectedStatusDate = String.valueOf(CommonUtils.ConvertStrDateToJavaEpoch(expected_statusDate));
+					
+					validStatusDate = checkPendingPaymentValue("statusDate", con_expectedStatusDate, pendingPaymentLineItemsMap);
+					validServiceDesc = checkPendingPaymentValue("serviceDesc", expected_serviceDesc, pendingPaymentLineItemsMap);
+					validAccountCode = checkPendingPaymentValue("accountCode", expected_accountCode, pendingPaymentLineItemsMap);
+					validServiceDescCode = checkPendingPaymentValue("serviceDescCode", expected_serviceDescCode, pendingPaymentLineItemsMap);
+					validCategoryGroupDesc = checkPendingPaymentValue("categoryGroupDesc", expected_categoryGroupDesc, pendingPaymentLineItemsMap);
+					validPaymentAmount = checkPendingPaymentValue("paymentAmount", expected_paymentAmount, pendingPaymentLineItemsMap);
+					validPayeeName = checkPendingPaymentValue("payeeName", expected_payeeName, pendingPaymentLineItemsMap);
+					validPaymentMethod = checkPendingPaymentValue("paymentMethod", expected_paymentMethod, pendingPaymentLineItemsMap);
+					validBankAccountNumber = checkPendingPaymentValue("bankAccountNumber", expected_bankAccountNumber, pendingPaymentLineItemsMap);
+					
+					String con_expectedPaymentDate = String.valueOf(CommonUtils.ConvertStrDateToJavaEpoch(expected_paymentDate));
+					//CommonUtils.ConvertEpochDateToDateStr("1519902000000");
+					validPaymentDate = checkPendingPaymentValue("paymentDate", con_expectedPaymentDate, pendingPaymentLineItemsMap);
+
+					validDependent = checkPendingPaymentValue("dependent", expected_dependent, pendingPaymentLineItemsMap);
+					validPaymentStatus = checkPendingPaymentValue("paymentStatus", expected_paymentStatus, pendingPaymentLineItemsMap);
+					
+					// check if all flags are valid 
+					if (validAccountCode && validBankAccountNumber && validCategoryGroupDesc && validDependent && validPayeeName && validPaymentAmount && validPaymentDate && validPaymentStatus
+							&& validPaymentMethod && validServiceDesc && validServiceDescCode) { 
+						flagFoundValidPendingPaymentRow = true;
+						flagFoundValidParentPendingPaymentRow = true;
+						// success - matching pendingPayments row
+						System.out.println("found valid row - stopping");
+						sbPendingPaymentCurrentRowResults.insert(0, "\nValid PendingPayments row (" + rowNum + ")");
+						sbAllPendingPaymentResults.append(sbPendingPaymentCurrentRowResults);
+						sbAllPendingPaymentResults.append("\n-------------------------------");
+						sbAllPendingPaymentResults.append("\nNot looking for additional rows");
+						sbAllPendingPaymentResults.append("\n-------------------------------");
+						break;
+					} else {
+						// not a matching pendingPayments row.  need to keep looking if there is more data
+						System.out.println("not a valid row - continuing if more records");
+						sbPendingPaymentCurrentRowResults.insert(0, "\nInvalid PendingPayments row (" + rowNum + ")");
+						// in either case, add the current pendingPayments data text to our full list for all rows
+						sbAllPendingPaymentResults.append(sbPendingPaymentCurrentRowResults);
+					}
+
+					rowNum++;
+					
+				} // end of for loop
+			}
+			if (flagFoundValidParentPendingPaymentRow) break;
+		}
+		System.out.println("done looking at Pending Payment LineItems related information");
+		}
+		else {
+				System.out.println("no Pending Payment LineItems Related information to check");
+				
+				//Using Empty map to check, comparing to expected values to ensure they are empty
+				HashMap pendingPaymentMap = new HashMap();
+
+				String con_expectedStatusDate = String.valueOf(CommonUtils.ConvertStrDateToJavaEpoch(expected_statusDate));
+				validStatusDate = checkPendingPaymentValue("statusDate", con_expectedStatusDate, pendingPaymentMap);
+				validServiceDesc = checkPendingPaymentValue("serviceDesc", expected_serviceDesc, pendingPaymentMap);
+				validAccountCode = checkPendingPaymentValue("accountCode", expected_accountCode, pendingPaymentMap);
+				validServiceDescCode = checkPendingPaymentValue("serviceDescCode", expected_serviceDescCode, pendingPaymentMap);
+				validCategoryGroupDesc = checkPendingPaymentValue("categoryGroupDesc", expected_categoryGroupDesc, pendingPaymentMap);
+				validPaymentAmount = checkPendingPaymentValue("paymentAmount", expected_paymentAmount, pendingPaymentMap);
+				validPayeeName = checkPendingPaymentValue("payeeName", expected_payeeName, pendingPaymentMap);
+				validPaymentMethod = checkPendingPaymentValue("paymentMethod", expected_paymentMethod, pendingPaymentMap);
+				validBankAccountNumber = checkPendingPaymentValue("bankAccountNumber", expected_bankAccountNumber, pendingPaymentMap);
+				String con_expectedPaymentDate = String.valueOf(CommonUtils.ConvertStrDateToJavaEpoch(expected_paymentDate));
+				validPaymentDate = checkPendingPaymentValue("paymentDate", con_expectedPaymentDate, pendingPaymentMap);
+				validDependent = checkPendingPaymentValue("dependent", expected_dependent, pendingPaymentMap);
+				validPaymentStatus = checkPendingPaymentValue("paymentStatus", expected_paymentStatus, pendingPaymentMap);
+	
+				
+				// check if all flags are valid 
+/*				if (validAccountCode && validBankAccountNumber && validCategoryGroupDesc && validDependent && validPayeeName && validPaymentAmount && validPaymentDate && validPaymentStatus
+						&& validPaymentMethod && validServiceDesc && validServiceDescCode ) { */
+				if (validAccountCode && validBankAccountNumber && validCategoryGroupDesc && validDependent && validPayeeName && validPaymentAmount && validPaymentStatus
+						&& validPaymentMethod && validServiceDesc && validServiceDescCode ) {					
+					flagFoundValidPendingPaymentRow = true;
+					// success - matching pendingPayments row
+					sbPendingPaymentCurrentRowResults.insert(0, "\nValid (Empty) PendingPayments row");
+				} else {
+					
+					// not a matching pendingPayments row.  need to keep looking if there is more data
+					sbPendingPaymentCurrentRowResults.insert(0, "\nInvalid (Empty) PendingPayments row");
+				}
+				// in either case, add the current pendingPayments data text to our full list for all rows
+				sbAllPendingPaymentResults.append(sbPendingPaymentCurrentRowResults);
+				sbAllPendingPaymentResults.append("\n<Not looking for additional rows as this is am empty pendingPayments result>");
+				
+			} // end else (checking expected when we have empty pendingPayments data)
+
+			// print what we found for PendingPayment data - it may be good or bad at this point
+			System.out.println(sbAllPendingPaymentResults.toString());
+
+			// throw an error if it's bad 
+			Assert.assertTrue("PendingPayment Data is not as expected:\n<" + sbAllPendingPaymentResults.toString() + ">", flagFoundValidPendingPaymentRow);
+
+			
+		}
+  
+	
+	
+	// Anna Getting correct Entitlements related Information from GET Pending Payment API
+	@Then("^Anna pending payment Entitlement Details information is correct for the claim with \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void anna_pending_payment_Entitlement_Details_information_is_correct_for_the_claim_with(String expected_categorisedAsWeeklyComp, String expected_entitlementCategoryCode, String expected_entitlementSubType, String expected_entitlementType, String expected_entitlementTypeDesc, String expected_payAdviceDesc) throws Throwable {
+
+			System.out.println("===========================================================================");
+			System.out.println("in --> anna_pending_payment_Entitlement_Details_information_is_correct_for_the_claim_with");		
+			System.out.println("===========================================================================");
+			
+			StringBuilder sbInvalidData = new StringBuilder();
+			boolean flagFoundValidParentPendingPaymentRow = false;
+			List<HashMap> pendingPaymentEntitlementMapList;
+			StringBuilder sbAllPendingPaymentResults = new StringBuilder();
+			
+			if (getPendingPaymentsInformationResponse.statusCode() == 200) {
+
+				int futureLineItemsize = getPendingPaymentsInformationResponse.jsonPath().getList("futurePaymentList.lineItems").size();
+
+				for (int i = 0; i < futureLineItemsize; i++) {
+					pendingPaymentEntitlementMapList = getPendingPaymentsInformationResponse.jsonPath().getList("futurePaymentList.lineItems["+i+"].entitlementDetails");
+				// this HashMap contains both <Long,String> and <String,String>
+
+					// clear previous results string builder (used for info message)
+					sbPendingPaymentCurrentRowResults = new StringBuilder();					
+
+				if (pendingPaymentEntitlementMapList != null && pendingPaymentEntitlementMapList.size() > 0) {
+					int rowNum = 1;
+					for (HashMap <String, String> pendingPaymentEntitlementMap : pendingPaymentEntitlementMapList) {
+
+						
+						sbPendingPaymentCurrentRowResults.append("\nPendingPayment Row ").append(rowNum).append(" of ").append(pendingPaymentEntitlementMapList.size());
+			
+						validCategorisedAsWeeklyComp = checkPendingPaymentValue("categorisedAsWeeklyComp", expected_categorisedAsWeeklyComp, pendingPaymentEntitlementMap);
+						validEntitlementCategoryCode = checkPendingPaymentValue("entitlementCategoryCode", expected_entitlementCategoryCode, pendingPaymentEntitlementMap);
+						validEntitlementSubType = checkPendingPaymentValue("entitlementSubType", expected_entitlementSubType, pendingPaymentEntitlementMap);
+						validEntitlementType = checkPendingPaymentValue("entitlementType", expected_entitlementType, pendingPaymentEntitlementMap);
+						validEntitlementTypeDesc = checkPendingPaymentValue("entitlementTypeDesc", expected_entitlementTypeDesc, pendingPaymentEntitlementMap);
+						validPayAdviceDesc = checkPendingPaymentValue("payAdviceDesc", expected_payAdviceDesc, pendingPaymentEntitlementMap);
+						
+						// check if all flags are valid 
+						if (validCategorisedAsWeeklyComp && validEntitlementCategoryCode && validEntitlementSubType && validEntitlementType && validEntitlementTypeDesc && validPayAdviceDesc) {
+							flagFoundValidPendingPaymentRow 	  = true;
+							flagFoundValidParentPendingPaymentRow = true;
+							// success - matching pendingPayments row
+							System.out.println("found valid row - stopping");
+							sbPendingPaymentCurrentRowResults.insert(0, "\nValid PendingPayments row (" + rowNum + ")");
+							// in either case, add the current pendingPayments data text to our full list for all rows
+							sbAllPendingPaymentResults.append(sbPendingPaymentCurrentRowResults);
+							sbAllPendingPaymentResults.append("\n-------------------------------");
+							sbAllPendingPaymentResults.append("\nNot looking for additional rows");
+							sbAllPendingPaymentResults.append("\n-------------------------------");							
+							// we found our matching row - stop looking
+							break;
+						} else {
+							// not a matching pendingPayments row.  need to keep looking if there is more data
+						//	System.out.println("not a valid row - continuing if more records");
+							
+							//sbPendingPaymentCurrentRowResults.insert(0, "\nInvalid PendingPayments row (" + rowNum + ")");
+							sbPendingPaymentCurrentRowResults.append("\nInvalid PendingPayments row (" + rowNum + ")");
+							
+							
+							// in either case, add the current pendingPayments data text to our full list for all rows
+							sbAllPendingPaymentResults.append(sbPendingPaymentCurrentRowResults);
+						}
+
+						rowNum++;
+						
+					} // end of for loop
+				}
+				if (flagFoundValidParentPendingPaymentRow) break;
+				}
+				System.out.println("done looking at Pending Payment LineItems related information");
+				} else {
+					System.out.println("no Pending Payment LineItems Related information to check");
+					
+					//Using Empty map to check, comparing to expected values to ensure they are empty
+					HashMap pendingPaymentEntitleMap = new HashMap();
+
+					validCategorisedAsWeeklyComp = checkPendingPaymentValue("categorisedAsWeeklyComp", expected_categorisedAsWeeklyComp, pendingPaymentEntitleMap);
+					validEntitlementCategoryCode = checkPendingPaymentValue("entitlementCategoryCode", expected_entitlementCategoryCode, pendingPaymentEntitleMap);
+					validEntitlementSubType = checkPendingPaymentValue("entitlementSubType", expected_entitlementSubType, pendingPaymentEntitleMap);
+					validEntitlementType = checkPendingPaymentValue("entitlementType", expected_entitlementType, pendingPaymentEntitleMap);
+					validEntitlementTypeDesc = checkPendingPaymentValue("entitlementTypeDesc", expected_entitlementTypeDesc, pendingPaymentEntitleMap);
+					validPayAdviceDesc = checkPendingPaymentValue("payAdviceDesc", expected_payAdviceDesc, pendingPaymentEntitleMap);
+					
+					// check if all flags are valid 
+					if (validCategorisedAsWeeklyComp && validEntitlementCategoryCode && validEntitlementSubType && validEntitlementType && validEntitlementTypeDesc && validPayAdviceDesc) {
+						flagFoundValidPendingPaymentRow = true;
+						// success - matching pendingPayments row
+						sbPendingPaymentCurrentRowResults.insert(0, "\nValid (Empty) PendingPayments row");
+					} else {
+						
+						// not a matching pendingPayments row.  need to keep looking if there is more data
+						sbPendingPaymentCurrentRowResults.insert(0, "\nInvalid (Empty) PendingPayments row");
+					}
+					// in either case, add the current pendingPayments data text to our full list for all rows
+					sbAllPendingPaymentResults.append(sbPendingPaymentCurrentRowResults);
+					sbAllPendingPaymentResults.append("\n<Not looking for additional rows as this is am empty pendingPayments result>");
+					
+				} // end else (checking expected when we have empty pendingPayments data)
+
+				// print what we found for PendingPayment data - it may be good or bad at this point
+				System.out.println(sbAllPendingPaymentResults.toString());
+
+				// throw an error if it's bad 
+				Assert.assertTrue("PendingPayment Data is not as expected:\n<" + sbAllPendingPaymentResults.toString() + ">", flagFoundValidPendingPaymentRow);
+
+			}			
+			
+
+	// flags for the PendingPayment codes
+	boolean validpaymentDate = false;
+	boolean validbankAccountNumber = false;
+	boolean validPaymentStatusCode = false;
+	boolean validPayeeName = false;
+	boolean validBankAccountNumber = false;
+	boolean validpaymentMethodCode = false;
+	boolean validPaymentDate = false;
+	boolean validPaymentAmount = false;
+	boolean validChequeNumber = false;
+	boolean validId = false;
+	boolean validWeeklyCompOnly = false;
+
+	// flags for the PendingPayment LineItems codes
+	boolean	validAccountCode = false;
+	boolean	validCategoryGroupDesc = false;
+	boolean	validDependent = false;
+	boolean	validPaymentStatus = false;
+	boolean	validPaymentMethod = false;
+	boolean	validServiceDesc = false;
+	boolean	validServiceDescCode = false;
+	boolean	validStatusDate = false;
+	
+	// flags for the PendingPayment Entitlements codes
+	boolean	validCategorisedAsWeeklyComp = false;
+	boolean	validEntitlementCategoryCode  = false;
+	boolean	validEntitlementSubType = false;
+	boolean	validEntitlementType = false;
+	boolean	validEntitlementTypeDesc = false;
+	boolean	validPayAdviceDesc = false;
+	
+
+	StringBuilder sbPendingPaymentCurrentRowResults = new StringBuilder();
+	String result = null;
+	String unexpected = " is not as expected --> expected: (";
+
+	/**
+	 * private convenience method to look for data in the provided map
+	 * when our test data contains a list of maps e.g. Pending Payment
+	 * as we check each row, we add to the 	 
+	 * 
+	 * the result of the check is stored in sbPendingPaymentCurrentRowResults
+	 * 
+	 * calling code will then add this sb data to the sbAllPendingPaymentResults which combines results from all rows 
+	 * 
+	 * 
+	 * @param pendingPaymentString
+	 * @param expected
+	 * @param pendingPaymentMap
+	 * @return
+	 */
+	private boolean checkPendingPaymentValue(String pendingPaymentString, String expected, HashMap pendingPaymentMap) {
+
+		//type casting to String to handle data. 
+		String sActualValue = String.valueOf(pendingPaymentMap.get(pendingPaymentString));
+		StringBuilder sb = new StringBuilder();
+
+		// dealing with null to and from dates
+		if (sActualValue == null || 
+				sActualValue.equals("null")) {
+			//System.out.println("changing null to empty");
+			sActualValue = "";			
+		}
+
+		if (!sActualValue.equals(expected)) { 
+			result =  sb.append("\n\t\tPendingPayment ").append(pendingPaymentString)
+					.append(unexpected)
+					.append(expected).append(") actual: (")
+					.append(sActualValue).append(")").toString();
+		} else {
+			result =  sb.append("\n\t\tPendingPayment is as expected: ")
+					.append(pendingPaymentString).append("--> (").append(expected).append(")").toString();
+		}
+
+		// the list of Pending Payment may contain multiple rows
+		// this list contains all elements from the PendingPayment map for the current row 
+		sbPendingPaymentCurrentRowResults.append(result);
+		
+		if (!result.contains(unexpected)) {
+			// valid code
+			return true;
+		}
+		// invalid code
+		return false;
+	}	
+	
+	
+	
+}

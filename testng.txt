@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="Regression Tests for ACC ICS MiddleWare API Suite" parallel="classes">
+  <test name="Run All Tests">
+  <classes>
+  <class name="com.acc.regression.InitializeTest"></class>
+  </classes>
+
+  </test> <!-- Test -->
+</suite> <!-- Suite -->

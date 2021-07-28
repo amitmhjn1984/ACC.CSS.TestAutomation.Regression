@@ -1,0 +1,214 @@
+package com.acc.regression.users;
+
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
+import com.acc.regression.GetJWT;
+import com.acc.regression.GetUser;
+import com.acc.regression.InitializeTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.restassured.RestAssured;
+import com.jayway.restassured.response.Response;
+import com.jayway.restassured.specification.RequestSpecification;
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+import gherkin.deps.com.google.gson.JsonPrimitive;
+import org.junit.Assert;
+import static com.jayway.restassured.RestAssured.given;
+import static io.restassured.path.json.JsonPath.from;
+
+
+
+    @SuppressWarnings("unchecked")
+    public class UserPeferencesService extends InitializeTest {
+	String endpoint = null;
+	String userId = null;
+	boolean flagPassFail ;
+	String token=null;
+
+	JSONObject preference = new JSONObject();
+	//JSONArray preferenceArray = new JSONArray();
+	JSONArray preferences = new JSONArray();
+	// JSONObject otherPreferencesJObject = new JSONObject();
+	// JSONObject oPreferences = new JSONObject();
+	// JSONArray otherPreferencesArray = new JSONArray();
+	List <String> preferenceType = new ArrayList<String>();
+	int getStatusCode = 0;
+	
+	Response getPreferencesInformationResponse;
+	Response putPreferencesInformationResponse;
+
+//	boolean email, sms;
+//	String preferenceType, otherPreferences;
+
+	@Given("^Anna is ACC user with existing preferences$")
+	public void anna_is_existing_ACC_user_with_existing_preferences() throws Throwable {
+
+		GetUser user = new GetUser();
+		user.selectRandomUser();
+		this.userId = accUser;
+		
+		GetJWT JWT = new GetJWT();
+		token = JWT.getToken(this.userId);
+	}
+
+	@Given("^Anna get preferences information$")
+	public void Anna_get_preferences_information() throws Throwable {
+
+		this.endpoint = "api/v1/users/" + this.userId + "/preferences";
+
+        	getPreferencesInformationResponse = given().
+			            							header("X-Authorization", token).
+						            				relaxedHTTPSValidation().
+						            				urlEncodingEnabled(false).
+						            				contentType("application/json").
+						            			when().
+						            				get(this.endpoint);
+
+		System.out.println(getPreferencesInformationResponse.jsonPath().prettyPrint());
+		getStatusCode = getPreferencesInformationResponse.statusCode();
+		
+		if ((getStatusCode != 200) || (getStatusCode == 404)) {
+			System.out.println("Unable to get the preferences information for UserId--->" + this.userId);
+			System.out.println("Status Code--->" + getPreferencesInformationResponse.statusCode());
+		} else
+			setPreferenceInformation();
+
+	}
+
+	@When("^Anna update ACC preferences \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" information$")
+	public void anna_update_ACC_preferences_information(String email, String preferenceType, String otherPreferences,
+			String sms) throws Throwable {
+
+		if (!email.trim().equals(""))
+			preference.put("email", email);
+
+		if (!preferenceType.trim().equals(""))
+			preference.put("preferenceType", preferenceType);
+
+		if (!sms.trim().equals(""))
+			preference.put("sms", sms);
+
+		if (!otherPreferences.trim().equals(""))
+			preference.put("otherPreferences", otherPreferences);
+		
+		if(getStatusCode==200){
+	    	this.preferenceType = getPreferencesInformationResponse.jsonPath().getList("preferenceType");
+	    	int index = this.preferenceType.indexOf(preferenceType);
+	    	if(index != -1){
+	    		preferences.remove(index);
+	    	}
+		}
+
+    	
+		preferences.add(preference);
+
+		ObjectMapper mapper = new ObjectMapper();
+		System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(preferences));
+
+             putPreferencesInformationResponse = given().
+            		 								header("X-Authorization", token).
+					            		 			relaxedHTTPSValidation().
+					            		 			urlEncodingEnabled(false).
+					            		 			contentType("application/json").
+					            		 			body(preferences).
+					            		 		 when().
+					            		 			put(this.endpoint);
+        
+             getStatusCode = putPreferencesInformationResponse.statusCode();
+		System.out.println(putPreferencesInformationResponse.asString());
+		if (putPreferencesInformationResponse.statusCode() != 200) {
+			System.out.println("Unable to update the account information Status Code--->"
+					+ putPreferencesInformationResponse.statusCode());
+
+		}
+	}
+
+	@Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" for preferences$")
+	public void Anna_should_see_the_request_returning_with_for_preferences(int expectedstatuscode, String statusmessage)
+			throws Throwable {
+
+		System.out.println("Returned Status code for the request - " + putPreferencesInformationResponse.statusCode());
+		// System.out.println("Put Account status message - "
+		// +putAddressInformationResponse.body().jsonPath().get("message"));
+
+		Assert.assertTrue("UserPreferences Service is NOT Running fine",
+				expectedstatuscode == putPreferencesInformationResponse.statusCode());
+		if (getStatusCode != 200) {
+			Assert.assertTrue("UserPreferences message is incorrect",
+					putPreferencesInformationResponse.jsonPath().get("message").toString().contains(statusmessage));
+		}
+		
+	}
+
+	@Then("^Anna is able to view updated preferences information$")
+	public void anna_is_able_to_view_updated_preferences_information() throws Throwable {
+		int passCounter=0;
+		if (putPreferencesInformationResponse.statusCode() == 200) {
+				getPreferencesInformationResponse = 
+												given().
+														header("X-Authorization", token).
+														relaxedHTTPSValidation().
+														urlEncodingEnabled(false).
+														contentType("application/json").
+												when().get(this.endpoint);
+			
+			JSONArray getPreferences = new JSONArray();
+        	JSONArray putPreferences = new JSONArray();
+        	
+//			Iterable<Object> getPreferences = getPreferencesInformationResponse.body().jsonPath().get();
+//			Iterable<Object> putPreferences = putPreferencesInformationResponse.body().jsonPath().get();
+        	JSONParser parser = new JSONParser();
+        	getPreferences = (JSONArray) parser.parse(getPreferencesInformationResponse.body().asString());
+        	putPreferences = (JSONArray) parser.parse(putPreferencesInformationResponse.body().asString());
+			
+			
+			for (Object getPreference : getPreferences) {
+				System.out.println("Looping array post: " + putPreferencesInformationResponse.jsonPath().get());
+				System.out.println("Looping array get: " + getPreference);
+				for (Object putPreference : putPreferences) {
+					if (getPreference.equals(putPreference)) {
+						passCounter++;
+						this.flagPassFail = true;
+						break;
+					}
+				}
+
+			}
+
+			Assert.assertTrue(this.flagPassFail);
+			Assert.assertEquals(getPreferences.size(), passCounter);
+
+		}
+
+	}
+
+	public void setPreferenceInformation() throws Throwable {
+		if (getPreferencesInformationResponse.statusCode() != 404) {
+			String getPreferenceString = getPreferencesInformationResponse.asString();
+			JSONParser parser = new JSONParser();
+			this.preferences =  (JSONArray) parser.parse(getPreferenceString);
+			System.out.println("Khatarnak jhatka--->" + this.preferences);
+		}
+
+		// this.email =
+		// getPreferencesInformationResponse.jsonPath().get("email");
+		// this.sms = getPreferencesInformationResponse.jsonPath().get("sms");
+		// this.language =
+		// getPreferencesInformationResponse.jsonPath().get("language");
+		// this.otherPreferencesValue =
+		// getPreferencesInformationResponse.jsonPath().get("otherPreferencesValue");
+
+	}
+
+}

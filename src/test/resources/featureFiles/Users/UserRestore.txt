@@ -1,0 +1,12 @@
+Feature: Restore ACC user credential service is UP and RUNNING - POST /api/v1/users/restore
+  			Actor: Anna is an existing ACC client wants to restore her credentials.
+
+  @css @user @ignore 
+  Scenario Outline: Resotring CSS user
+    Given Anna wants to restore MyACC portal credentials "<RequestType>" on "<endpoint>"
+    When Anna pass forgot password information "<email>" "<phoneNumber>"
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for forgot password
+
+    Examples: Anna send forgot password information
+      | RequestType | endpoint             | email     | phoneNumber | statuscode | statusmessage |
+      | POST        | /api/v1/users/invite | 333333333 |    02112345 |        200 |               |

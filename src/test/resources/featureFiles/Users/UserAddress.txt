@@ -1,0 +1,48 @@
+#Feature: Check user address is retrieve and update servie is UP and RUNNING - GET /api/v1/users/{userId}/addresses
+  #			PUT /api/v1/users/{userId}/addresses
+#
+  #@css @users @regression
+  #Scenario Outline: Updating the user address information
+    #Given Anna is ACC user with existing address, test case description "<TestCondition>"
+    #And Anna get address information
+    #When Anna update ACC address "<type>" "<line1>" "<line2>" "<suburb>" "<city>" "<postCode>" "<country>" information
+    #Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for address
+    #And Anna is able to view updated address information
+#
+    #Examples: Anna checking on User Address service
+      #| TestCondition           | type        | line1              | line2           | suburb         | city       | postCode | country | statuscode | statusmessage           |
+      #| Valid address with Home | Home        | 5 Will St          | Cental          | CBD            | Wellington |     6011 | New Zealand      |        200 | Address details updated |
+      #| Valid address format    | Home        | 24A Takanini close | Cental          | CBD            | Wellington |     6011 | New Zealand      |        200 | Address details updated |
+      #| Address with unit       | Home        | 2-12 Will St       | Testing far sub | CBD            | Wellington |     6011 | New Zealand      |        200 | Address details updated |
+      #| Valid address format    | Alternative | 5 A Will St        | Cental          | Mt. Wellington | Wellington |     6011 | New Zealand      |        200 | Address details updated |
+      #| Valid address format    | Home        | 5 Will St          | Cental          | CBD            | Auckland   |     6011 | New Zealand      |        200 | Address details updated |
+      #| Valid address format    | Alternative | 5 Will St          | Cental          | CBD            | Wellington |     5315 | New Zealand      |        200 | Address details updated |
+      #| Valid address format    | Home        | 5 Will St          | Cental          | CBD            | Wellington |     6012 | New Zealand      |        200 | Address details updated |
+#
+  #@css @users @regression
+  #Scenario Outline: Updating the user address with negative information
+    #Given Anna is ACC user with existing address, test case description "<TestCondition>"
+    #And Anna get address information
+    #When Anna update ACC address "<type>" "<line1>" "<line2>" "<suburb>" "<city>" "<postCode>" "<country>" information
+    #Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for address
+    #And Anna is able to view updated address information
+#
+    #Examples: Anna checking on User Address service
+      #| TestCondition       | type | line1     | line2  | suburb | city       | postCode | country | statuscode | statusmessage                     |
+      #| Invalid Type        | Test | 5 Will St | Cental | CBD    | Wellington |     6011 | New Zealand      |        400 | Can not deserialize value of type |
+      #| Postal Code missing | Home | 5 Will St | Cental | CBD    | Wellington |          | New Zealand      |        400 | Request message format error      |
+      #| Country missing     | Home | 5 Will St | Cental | CBD    | Wellington |     6011 |         |        400 | Request message format error      |
+#
+  #@css @users @smoke
+  #Scenario Outline: Updating the user address information for smoke test
+    #Given Anna is ACC user with existing address, test case description "<TestCondition>"
+    #And Anna get address information
+    #When Anna update ACC address "<type>" "<line1>" "<line2>" "<suburb>" "<city>" "<postCode>" "<country>" information
+    #Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for address
+    #And Anna is able to view updated address information
+#
+    #Examples: Anna checking on User Address service
+      #| TestCondition                       | type        | line1          | line2  | suburb | city       | postCode | country | statuscode | statusmessage           |
+      #| Valid Home address with Home        | Home        | 5 Will St      | Cental | CBD    | Wellington |     6011 | New Zealand      |        200 | Address details updated |
+      #| Valid Alternative address with Home | Alternative | 5 Williston St | Cental | CBD    | Wellington |     6011 | New Zealand      |        200 | Address details updated |
+      #| Address with unit                   | Home        | 1/942 Will St  | Cental | CBD    | Wellington |     6011 | New Zealand      |        200 | Address details updated |

@@ -1,0 +1,90 @@
+package com.acc.regression.users;
+
+import java.net.URLEncoder;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+
+import com.acc.regression.InitializeTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.restassured.RestAssured;
+import com.jayway.restassured.response.Response;
+import com.jayway.restassured.specification.RequestSpecification;
+
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+import org.junit.Assert;
+import static com.jayway.restassured.RestAssured.given;
+import static io.restassured.path.json.JsonPath.from;
+
+@SuppressWarnings("unchecked")
+public class UserVerify extends InitializeTest {
+	String endpoint = null;
+	String userId = null;
+
+	JSONObject verifyRegistrationRequest = new JSONObject();
+
+	Response postVerifyRegistrationResponse;
+
+	@Given("^Anna wants to verify MyACC portal credentials \"([^\"]*)\" on \"([^\"]*)\" with \"([^\"]*)\"$")
+	public void anna_wants_to_verify_MyACC_portal_credentials_on_with(String RequestType, String endpoint, String description) throws Throwable {
+		this.endpoint = endpoint;
+
+	}
+
+	@When("^Anna pass verify registration information \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void anna_pass_verify_registration_information(String code, String dateofBirth, String invalidateCode)
+			throws Throwable {
+
+		verifyRegistrationRequest.put("code", code);
+		verifyRegistrationRequest.put("dateOfBirth", dateofBirth);
+		verifyRegistrationRequest.put("invalidateCode", invalidateCode);
+
+		ObjectMapper mapper = new ObjectMapper();
+		System.out.println("This is the post body");
+		System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(verifyRegistrationRequest));
+
+		postVerifyRegistrationResponse = given().
+											//proxy("webproxy.ds.acc.co.nz", 8080).
+											relaxedHTTPSValidation().
+											urlEncodingEnabled(false).
+											contentType("application/json").
+											body(verifyRegistrationRequest).
+										when().
+											post(this.endpoint);
+
+		// System.out.println(putAccountInformationResponse.jsonPath().prettyPrint());
+		if (postVerifyRegistrationResponse.statusCode() != 200) {
+			System.out.println("Unable to update the credential information Status Code--->"
+					+ postVerifyRegistrationResponse.statusCode());
+
+		}
+	}
+
+	@Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" for verify registration$")
+	public void anna_should_see_the_request_returning_with_for_verify_registration(int expectedstatuscode,
+			String expectedStatusMessage) throws Throwable {
+		if(postVerifyRegistrationResponse.statusCode() != 200){
+			System.out.println("Returned Status code for the request - " + postVerifyRegistrationResponse.statusCode());
+			System.out.println(postVerifyRegistrationResponse.jsonPath().prettyPrint());
+//			System.out.println(
+//					"Put Account status message - " + postVerifyRegistrationResponse.body().jsonPath().get("message"));
+
+			//Assert.assertEquals(expectedStatusMessage,postVerifyRegistrationResponse.body().jsonPath().get("message"));
+			Assert.assertTrue(postVerifyRegistrationResponse.body().jsonPath().get("message").toString().contains(expectedStatusMessage));
+		}
+		
+		Assert.assertTrue("UserAccount Service is Running fine",
+				expectedstatuscode == postVerifyRegistrationResponse.statusCode());
+
+	}
+
+}

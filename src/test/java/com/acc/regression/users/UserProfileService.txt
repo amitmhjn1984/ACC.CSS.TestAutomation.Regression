@@ -1,0 +1,197 @@
+package com.acc.regression.users;
+
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+
+import com.acc.regression.GetJWT;
+import com.acc.regression.GetUser;
+import com.acc.regression.InitializeTest;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.restassured.RestAssured;
+import com.jayway.restassured.response.Response;
+import com.jayway.restassured.specification.RequestSpecification;
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+import gherkin.deps.com.google.gson.JsonPrimitive;
+import org.junit.Assert;
+import static com.jayway.restassured.RestAssured.given;
+import static io.restassured.path.json.JsonPath.from;
+
+@SuppressWarnings("unchecked")
+public class UserProfileService extends InitializeTest {
+	String endpoint = null;
+	String userId = null;
+	Response getProfileInformationResponse;
+	int getStatusCode = 0;
+	String token;
+
+	// //Contact
+	// String emailAddress, otherCountryCode, primaryCountryCode,
+	// primaryPhoneNumber, otherPhoneNumber, otherAreaCode, primaryAreaCode;
+	//
+	// //Address
+	// String type, line1,line2,suburb,city,postCode,country;
+	//
+	// //profile
+	// boolean confirmDeclaration;
+	// String dateCreated, dateofBirth, email, fullName, gender, id, nhiNumber,
+	// password, uniqueCode, lastUpdate;
+	//
+	// //account
+	// String accountNumber, bankName, irdNumber, secondAccountNumber,
+	// secondBankName, taxCode;
+
+	@Given("^Anna is ACC user with existing profile \"([^\"]*)\"$")
+	public void anna_is_existing_ACC_user_with_existing_profile(String userId) throws Throwable {
+		if (userId.trim().equals("")) {
+			GetUser user = new GetUser();
+			user.selectRandomUser();
+			this.userId = accUser;
+		} else
+			this.userId = userId;
+		
+		GetJWT JWT = new GetJWT();
+		token = JWT.getToken(this.userId);
+		
+
+	}
+
+	@When("^Anna get profile information$")
+	public void Anna_get_profile_information() throws Throwable {
+
+		this.endpoint = "api/v1/users/" + this.userId + "/profile";
+
+		getProfileInformationResponse = given().
+											header("X-Authorization", token).
+											relaxedHTTPSValidation().
+											urlEncodingEnabled(false).
+											contentType("application/json").
+										when().
+											get(this.endpoint);
+
+		System.out.println("Response data");
+		System.out.println(getProfileInformationResponse.asString());
+		
+		getStatusCode = getProfileInformationResponse.statusCode();
+		if ((getStatusCode != 200) || (getStatusCode == 404)) {
+			System.out.println("Unable to get the profile information for UserId--->" + this.userId);
+			System.out.println("Status Code--->" + getStatusCode);
+		}
+
+	}
+
+	@Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" for profile$")
+	public void Anna_should_see_the_request_returning_with_for_profile(int expectedstatuscode, String statusmessage)
+			throws Throwable {
+
+		if (getStatusCode != 200) {
+			System.out.println("Unable to get the profile information, Status Code--->" + getStatusCode);
+//bycecilia			Assert.assertEquals(statusmessage, getProfileInformationResponse.jsonPath().get("message"));
+			Assert.assertTrue("UserPreferences Service is NOT Running fine",
+					expectedstatuscode == getStatusCode);
+		}
+
+		Assert.assertTrue("UserPreferences Service is NOT Running fine",
+				expectedstatuscode == getStatusCode);
+
+	}
+
+	@Then("^Anna is able to view updated profile information \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void anna_is_able_to_view_profile_account_information(String firstName,String middleName, String surName, String gender,
+			String nhiNumber, String dateOfBirth, String confirmDeclaration) throws Throwable {
+		if(getStatusCode==200){
+			//StringBuilder sbErrorMessages = new StringBuilder();
+			Assert.assertTrue("Expecting first name as: "+firstName+ " but API return as: "+getProfileInformationResponse.jsonPath().get("firstName"),getProfileInformationResponse.jsonPath().get("firstName").equals(firstName));
+			Assert.assertTrue("Expecting middle name as: "+middleName+ " but API return as: "+getProfileInformationResponse.jsonPath().get("middleName"),getProfileInformationResponse.jsonPath().get("middleName").equals(middleName));
+			Assert.assertTrue("Expecting sur name as: "+surName+ " but API return as: "+getProfileInformationResponse.jsonPath().get("surName"),getProfileInformationResponse.jsonPath().get("surName").equals(surName));
+			Assert.assertTrue("Expecting gender as: "+gender+ " but API return as: "+getProfileInformationResponse.jsonPath().get("gender"),getProfileInformationResponse.jsonPath().get("gender").equals(gender));
+			Assert.assertTrue("Expecting nhiNumber as: "+nhiNumber+ " but API return as: "+getProfileInformationResponse.jsonPath().get("nhiNumber"),getProfileInformationResponse.jsonPath().get("nhiNumber").equals(nhiNumber));
+			Assert.assertTrue("Expecting dateOfBirth as: "+dateOfBirth+ " but API return as: "+getProfileInformationResponse.jsonPath().get("dateOfBirth"),getProfileInformationResponse.jsonPath().get("dateOfBirth").toString().equals(dateOfBirth));
+			
+			
+/*			Assert.assertEquals(firstName, getProfileInformationResponse.jsonPath().get("firstName"));
+			Assert.assertEquals(middleName, getProfileInformationResponse.jsonPath().get("middleName"));
+			Assert.assertEquals(surName, getProfileInformationResponse.jsonPath().get("surName"));
+			Assert.assertEquals(gender, getProfileInformationResponse.jsonPath().get("gender"));
+			Assert.assertEquals(nhiNumber, getProfileInformationResponse.jsonPath().get("nhiNumber"));
+			Assert.assertEquals(dateOfBirth, getProfileInformationResponse.jsonPath().get("dateOfBirth").toString());*/
+			//Assert.assertEquals(confirmDeclaration, getProfileInformationResponse.jsonPath().get("confirmDeclaration").toString());
+		}
+
+	}
+	//"<workCountryCode>" "<workAreaCode>" "<workPhoneNumber>" "<workExtension>" "<mobileCountryCode>" "<mobileAreaCode>" "<mobilePhoneNumber>" "<mobileExtension>" "<emailAddress>"
+	@Then("^Anna is able to view contact information \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void anna_is_able_to_view_contact_information(String workCountryCode,String workAreaCode, String workPhoneNumber, String workExtension,
+			String mobileCountryCode, String mobileAreaCode, String mobilePhoneNumber, String mobileExtension, String emailAddress) throws Throwable {
+		if(getStatusCode==200){
+			//StringBuilder sbErrorMessages = new StringBuilder();
+			Assert.assertTrue("Expecting Work Country Code name as: "+workCountryCode+ " but API return as: "+getProfileInformationResponse.jsonPath().get("contact.work.countryCode"),getProfileInformationResponse.jsonPath().get("contact.work.countryCode").equals(workCountryCode));
+			Assert.assertTrue("Expecting Work Area Code as: "+workAreaCode+ " but API return as: "+getProfileInformationResponse.jsonPath().get("contact.work.areaCode"),getProfileInformationResponse.jsonPath().get("contact.work.areaCode").equals(workAreaCode));
+			Assert.assertTrue("Expecting Work Phone number as: "+workPhoneNumber+ " but API return as: "+getProfileInformationResponse.jsonPath().get("contact.work.phoneNumber"),getProfileInformationResponse.jsonPath().get("contact.work.phoneNumber").equals(workPhoneNumber));
+			Assert.assertTrue("Expecting work extension as: "+workExtension+ " but API return as: "+getProfileInformationResponse.jsonPath().get("contact.work.extension"),getProfileInformationResponse.jsonPath().get("contact.work.extension").equals(workExtension));
+
+			Assert.assertTrue("Expecting Mobile Country Code name as: "+mobileCountryCode+ " but API return as: "+getProfileInformationResponse.jsonPath().get("contact.mobile.countryCode"),getProfileInformationResponse.jsonPath().get("contact.mobile.countryCode").equals(mobileCountryCode));
+			Assert.assertTrue("Expecting Mobile Area Code as: "+mobileAreaCode+ " but API return as: "+getProfileInformationResponse.jsonPath().get("contact.mobile.areaCode"),getProfileInformationResponse.jsonPath().get("contact.mobile.areaCode").equals(mobileAreaCode));
+			Assert.assertTrue("Expecting Mobile Phone number as: "+mobilePhoneNumber+ " but API return as: "+getProfileInformationResponse.jsonPath().get("contact.mobile.phoneNumber"),getProfileInformationResponse.jsonPath().get("contact.mobile.phoneNumber").equals(mobilePhoneNumber));
+			Assert.assertTrue("Expecting Mobile extension as: "+mobileExtension+ " but API return as: "+getProfileInformationResponse.jsonPath().get("contact.mobile.extension"),getProfileInformationResponse.jsonPath().get("contact.mobile.extension").equals(mobileExtension));
+			
+			Assert.assertTrue("Expecting Eamil as: "+emailAddress+ " but API return as: "+getProfileInformationResponse.jsonPath().get("contact.emailAddress"),getProfileInformationResponse.jsonPath().get("contact.emailAddress").equals(emailAddress));
+
+
+		}
+
+	}
+	//"<weeklyCompBankName>" "<weeklyCompAccountNumber>" "<weeklyCompIrdNumberr>" "<weeklyCompTaxCode>"
+	@Then("^Anna is able to view account information \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void anna_is_able_to_view_account_information(String weeklyCompBankName,String weeklyCompAccountNumber, String weeklyCompIrdNumberr, String weeklyCompTaxCode) throws Throwable {
+		if(getStatusCode==200){
+			//StringBuilder sbErrorMessages = new StringBuilder();
+			//Assert.assertTrue("Expecting weekly comp bank name as: "+weeklyCompBankName+ " but API return as: "+getProfileInformationResponse.jsonPath().get("weeklyComp.bankName"),getProfileInformationResponse.jsonPath().get("weeklyComp.bankName").equals(weeklyCompBankName));
+			Assert.assertTrue("Expecting weekly comp account number as: "+weeklyCompAccountNumber+ " but API return as: "+getProfileInformationResponse.jsonPath().get("account.weeklyComp.accountNumber"),getProfileInformationResponse.jsonPath().get("account.weeklyComp.accountNumber").equals(weeklyCompAccountNumber));
+			Assert.assertTrue("Expecting weekly comp IRD as: "+weeklyCompIrdNumberr+ " but API return as: "+getProfileInformationResponse.jsonPath().get("account.weeklyComp.irdNumber"),getProfileInformationResponse.jsonPath().get("account.weeklyComp.irdNumber").equals(weeklyCompIrdNumberr));
+			Assert.assertTrue("Expecting weekly comp tax code as: "+weeklyCompTaxCode+ " but API return as: "+getProfileInformationResponse.jsonPath().get("account.weeklyComp.taxCode"),getProfileInformationResponse.jsonPath().get("account.weeklyComp.taxCode").equals(weeklyCompTaxCode));
+			
+
+		}
+	
+	}
+	// "<type>" "<line1>" "<line2>" "<suburb>" "<city>" "<postCode>" "<country>"
+	@Then("^Anna is able to view address information \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void anna_is_able_to_view_address_information(String type,String line1, String line2, String suburb, String city, String postCode, String country) throws Throwable {
+		if(getStatusCode==200){
+			int addressSize = getProfileInformationResponse.body().jsonPath().getList("address").size();
+			boolean flagPassFail=false;
+			
+			for(int i=0;i<addressSize;i++){
+				System.out.println(getProfileInformationResponse.body().jsonPath().getString("address["+i+"].type"));
+				if(type.equals(getProfileInformationResponse.body().jsonPath().getString("address["+i+"].type"))){
+					String actualline1 = getProfileInformationResponse.body().jsonPath().getString("address["+i+"].line1");
+					String actualline2 = getProfileInformationResponse.body().jsonPath().getString("address["+i+"].line2");
+					String actualsuburb = getProfileInformationResponse.body().jsonPath().getString("address["+i+"].suburb");
+					String actualcity = getProfileInformationResponse.body().jsonPath().getString("address["+i+"].city");
+					String actualpostCode = getProfileInformationResponse.body().jsonPath().getString("address["+i+"].postCode");
+					String actualcountry = getProfileInformationResponse.body().jsonPath().getString("address["+i+"].country");
+					Assert.assertTrue("Expecting address line 1 as: "+line1+ " but API return as: "+actualline1 ,actualline1.equals(line1));
+					Assert.assertTrue("Expecting address line 2 as: "+line2+ " but API return as: "+actualline2 ,actualline2.equals(line2));
+					Assert.assertTrue("Expecting address suburb as: "+suburb+ " but API return as: "+actualsuburb ,actualsuburb.equals(suburb));
+					Assert.assertTrue("Expecting address city as: "+city+ " but API return as: "+actualcity ,actualcity.equals(city));
+					Assert.assertTrue("Expecting address postCode as: "+postCode+ " but API return as: "+actualpostCode ,actualpostCode.equals(postCode));
+					Assert.assertTrue("Expecting address country as: "+country+ " but API return as: "+actualcountry ,actualcountry.equals(country));
+					flagPassFail= true;
+				}
+			}
+			Assert.assertTrue("Not able to find the expected address in the response",flagPassFail);
+			
+		}
+	}
+}

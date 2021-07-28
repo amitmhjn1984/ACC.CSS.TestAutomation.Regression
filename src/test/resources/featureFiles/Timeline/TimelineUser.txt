@@ -1,0 +1,21 @@
+Feature: Check user timeline retrieve service is UP and RUNNING - GET /api/v1/{userId}/timeline
+  			Actor: Anna is an existing ACC client.
+
+  @css @timeline @smoke @regression
+  Scenario Outline: Retrieve user Timeline
+    Given Anna is ACC client with existing account "<userId>" with "<description>"
+    When Anna retrieve her timeline activities "<startDate>" "<endDate>" "<page>" "<pageSize>"
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for timeline
+    And Anna is able to view all her timeline activities
+
+    Examples: Anna creating timeline
+      | description                              | userId | startDate  | endDate    | page | pageSize | statuscode | statusmessage                                                                           |
+      | Get user timeline information            |        | 2017-10-25 | 2017-10-28 |    1 |     1000 |        200 |                                                                                         |
+      | Get user timeline information for page 4 |        | 2017-10-25 | 2017-12-25 |    4 |       25 |        200 |                                                                                         |
+      | User does not exist in CSS               |   2345 |            |            |      |          |        401 | Unauthorized                                                            |
+      | No timeline provided                     |        |            |            |      |          |        400 | Request message format error                                                            |
+      | No timeline between dates                |        | 2016-01-01 | 2017-01-01 |      |          |        200 |                                                                                         |
+      | Start date is in future                  |        | 2020-10-25 |            |      |          |        400 | Request message format error                                                            |
+      | Start date is greater than end date      |        | 2017-10-25 | 2017-02-25 |      |          |        400 | Request message format error                                                            |
+      | page contains special char               |        | 2017-10-25 | 2019-02-10 | $    |          |        400 | Failed to convert value of type 'java.lang.String' to required type 'java.lang.Integer' |
+      | page size contains negative value        |        | 2017-10-25 | 2019-02-10 |      |       -1 |        400 | Request message format error                                                            |

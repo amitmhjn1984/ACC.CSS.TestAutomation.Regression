@@ -1,0 +1,59 @@
+Feature: Request for support servie is UP and RUNNING POST /api/v1/users/{userId}/supports
+  			Actor: Anna is an existing ACC client request for support.
+
+  @css @support @smoke
+  Scenario Outline: User requesting for support for smoke
+    Given Anna is ACC user with existing support "<userId>" "<testDescription>"
+    When Anna request for ACC support "<claimId>" "<activityType>" "<title>" "<description>" "<key>" "<value>" "<collectionTitle>" "<values>" "<comment>"
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for support
+    And Anna support request is created
+
+    Examples: Anna requesting for support
+      | testDescription            | userId   | claimId     | activityType                                   | title                                                   | description                           | key                                     | value                                     | collectionTitle | values    | comment | statuscode | statusmessage |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_CHANGE_PERSONAL_DETAILS                | NGCM - Request Change in Personal Information           | Change personal information           | Some Key Personal                       | some value Personal                       | test1           | any value | Testing |        200 |               |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_CLIENT_CONTACT_REQUEST                 | NGCM - Request Change in CLIENT_CONTACT                 | Change client_contact                 | Some Key client                         | some value client                         | test2           | any value | Testing |        200 |               |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_COMMUNICATION_ENTITLEMENT_REQUEST      | NGCM - Request Change in COMMUNICATION_ENTITLEMENT      | Change communication_entitlement      | Some Key communication_entitlement      | some value communication_entitlement      | test3           | any value | Testing |        200 |               |
+     
+      
+      @css @support @regression
+  Scenario Outline: User requesting for support
+    Given Anna is ACC user with existing support "<userId>" "<testDescription>"
+    When Anna request for ACC support "<claimId>" "<activityType>" "<title>" "<description>" "<key>" "<value>" "<collectionTitle>" "<values>" "<comment>"
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for support
+    And Anna support request is created
+
+    Examples: Anna requesting for support
+      | testDescription            | userId   | claimId     | activityType                                   | title                                                   | description                           | key                                     | value                                     | collectionTitle | values    | comment | statuscode | statusmessage |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_CHANGE_PERSONAL_DETAILS                | NGCM - Request Change in Personal Information           | Change personal information           | Some Key Personal                       | some value Personal                       | test1           | any value | Testing |        200 |               |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_CLIENT_CONTACT_REQUEST                 | NGCM - Request Change in CLIENT_CONTACT                 | Change client_contact                 | Some Key client                         | some value client                         | test2           | any value | Testing |        200 |               |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_COMMUNICATION_ENTITLEMENT_REQUEST      | NGCM - Request Change in COMMUNICATION_ENTITLEMENT      | Change communication_entitlement      | Some Key communication_entitlement      | some value communication_entitlement      | test3           | any value | Testing |        200 |               |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_MILEAGE_REIMBURSEMENT_REQUEST          | NGCM - Request Change in REIMBURSEMENT_REQUEST          | Change reimbursement_request          | Some Keyreimbursement_request           | some value reimbursement_request          | test4           | any value | Testing |        200 |               |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_OTHER_ENTITLEMENT_REQUEST              | NGCM - Request Change in ENTITLEMENT_REQUEST            | Change entitlement_request            | Some Keyentitlement_request             | some value entitlement_request            | test5           | any value | Testing |        200 |               |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_OTHER_EQUIPMENT_REQUEST                | NGCM - Request Change in EQUIPMENT_REQUEST              | Change equipment_request              | Some Keyequipment_request               | some value equipment_request              | test6           | any value | Testing |        200 |               |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_OTHER_TRAVEL_REQUEST                   | NGCM - Request Change in TRAVEL_REQUEST                 | Change travel_request                 | Some Keytravel_request                  | some value travel_request                 | test7           | any value | Testing |        200 |               |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_PERSONAL_CARE_REQUEST                  | NGCM - Request Change in CARE_REQUEST                   | Change care_request                   | Some Keycare_request                    | some value care_request                   | test8           | any value | Testing |        200 |               |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_PHARMACEUTICAL_REIMBURSEMENT_REQUEST   | NGCM - Request Change in PHARMACEUTICAL_REIMBURSEMENT   | Change pharmaceutical_reimbursement   | Some Keypharmaceutical_reimbursement    | some value pharmaceutical_reimbursement   | test9           | any value | Testing |        200 |               |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_PUBLIC_TRANSPORT_REIMBURSEMENT_REQUEST | NGCM - Request Change in PUBLIC_TRANSPORT_REIMBURSEMENT | Change public_transport_reimbursement | Some Key public_transport_reimbursement | some value public_transport_reimbursement | test10          | any value | Testing |        200 |               |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_SIMPLE_EQUIPMENT_REQUEST               | NGCM - Request Change in EQUIPMENT_REQUEST              | Change equipment_request              | Some Keyequipment_request               | some value equipment_request              | test11          | any value | Testing |        200 |               |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_TAXI_CARD_REQUEST                      | NGCM - Request Change in CARD_REQUEST                   | Change card_request                   | Some Keycard_request                    | some value card_request                   | test12          | any value | Testing |        200 |               |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_UPDATE_EMPLOYER_DETAILS                | NGCM - Request Change in UPDATE_EMPLOYER_DETAILS        | Change update_employer_details        | Some Keyupdate_employer_details         | some value update_employer_details        | test13          | any value | Testing |        200 |               |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_UPDATE_INJURY_DETAILS                  | NGCM - Request Change in UPDATE_INJURY_DETAILS          | Change update_injury_details          | Some Keyupdate_injury_details           | some value update_injury_details          | test14          | any value | Testing |        200 |               |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_UPDATE_WORK_DETAILS                    | NGCM - Request Change in UPDATE_WORK_DETAILS            | Change update_work_details            | Some Keyupdate_work_details             | some valueupdate_work_details             | test14          | any value | Testing |        200 |               |
+      | Request for Chair suppport | 17118411 | 10039549514 | SUPPORT_WEEKLY_COMPENSATION                    | NGCM - Request Change in WEEKLY_COMPENSATION            | Change weekly_compensation            | Some Keyweekly_compensation             | some value  weekly_compensation           | test16          | any value | Testing |        200 |               |
+      
+      
+      @css @support @regression 
+  Scenario Outline: User requesting for support without claim id
+    Given Anna is ACC user with existing support "<userId>" "<testDescription>"
+    When Anna request for ACC support without claim id "<activityType>" "<title>" "<description>" "<key>" "<value>" "<comment>"
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for support
+    #And Anna support request is created
+
+    Examples: Anna requesting for support
+      | testDescription                           | userId   | activityType                          | title                                 | description                           | key                            | value                                           | comment       | statuscode | statusmessage |
+#      | CLIENT_CONTACT_REQEUST                    | 17237927 | SUPPORT_CLIENT_CONTACT_REQUEST        | MyACC client contact request          | Change personal information           |email/phone                     | Gavin.snyman+ACC+E73+CLARKKENT@assurity.co.nz   | testcecilic   |        500 |               |
+      | SUPPORT_CHANGE_PERSONAL_DETAILS           | C4827909 | SUPPORT_CHANGE_PERSONAL_DETAILS       | MyACC client contact request          | Change personal information           |email/phone                     | Gavin.snyman+ACC+E73+CLARKKENT@assurity.co.nz   | testcecilic   |        200 |               |
+#      | SUPPORT_UPDATE_WORK_DETAILS               | 17237928 | SUPPORT_UPDATE_WORK_DETAILS           | MyACC client contact request          | Change personal information           |email/phone                     | Gavin.snyman+ACC+E73+CLARKKENT@assurity.co.nz   | testcecilic   |        500 |               |
+      | SUPPORT_TAXI_CARD_REQUEST                 | C4827909 | SUPPORT_TAXI_CARD_REQUEST             | MyACC client contact request          | Change personal information           |email/phone                     | Gavin.snyman+ACC+E73+CLARKKENT@assurity.co.nz   | testcecilic   |        200 |               |      
+      | SUPPORT_SIMPLE_EQUIPMENT_REQUEST          | C4827909 | SUPPORT_SIMPLE_EQUIPMENT_REQUEST      | MyACC client contact request          | Change personal information           |email/phone                     | Gavin.snyman+ACC+E73+CLARKKENT@assurity.co.nz   | testcecilic   |        200 |               |      
+      | SUPPORT_CHANGE_PERSONAL_DETAILS           | C4827909 | SUPPORT_CHANGE_PERSONAL_DETAILS       | MyACC client contact request          | Change personal information           |email/phone                     | Gavin.snyman+ACC+E73+CLARKKENT@assurity.co.nz   | testcecilic   |        200 |               |      

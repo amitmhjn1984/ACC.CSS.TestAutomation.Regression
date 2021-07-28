@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<extentreports>
+    <configuration>
+        <theme>dark</theme>
+        <encoding>UTF-8</encoding>
+        <documentTitle>ACC ICS API MiddleWare Test Automation - v1.0.0</documentTitle>
+        <reportName>ACC ICS API Automation Test Report</reportName>
+        <reportHeadline> - v1.0.0</reportHeadline>
+        <dateFormat>dd-MM-yyyy</dateFormat>
+        <timeFormat>HH:mm:ss</timeFormat>
+        <ChartVisibilityOnOpen>true</ChartVisibilityOnOpen>
+        <TestViewChartLocation>top</TestViewChartLocation>
+        <ReportUsesManualConfiguration>true</ReportUsesManualConfiguration>>
+        <!-- custom javascript -->
+        <scripts>
+            <![CDATA[
+      $(document).ready(function() {
+
+      });
+      ]]>
+        </scripts>
+
+        <scripts>
+            <![CDATA[
+       $(document).ready(function() {
+             $('.dashboard-view').click();
+       });
+	]]>
+        </scripts>
+
+        <!-- custom styles -->
+        <styles>
+            <![CDATA[
+
+      ]]>
+        </styles>
+    </configuration>
+</extentreports>
+

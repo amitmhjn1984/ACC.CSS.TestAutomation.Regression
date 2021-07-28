@@ -1,0 +1,168 @@
+package com.acc.regression.network;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Random;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+
+import com.acc.regression.GetJWT;
+import com.acc.regression.GetUser;
+import com.acc.regression.InitializeTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.restassured.response.Response;
+import com.sun.xml.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
+
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+import org.junit.Assert;
+
+import static com.jayway.restassured.RestAssured.given;
+
+
+@SuppressWarnings("unchecked")
+public class NetworkUserContact extends InitializeTest {
+	String endpoint = null;
+	String userId = null;
+	String token = null;
+	Response getUserContactInformationResponse;
+	private boolean flagPassFail;
+
+	@Given("^Anna is existing ACC client \"([^\"]*)\", test description \"([^\"]*)\"$")
+	public void anna_is_existing_ACC_client(String userId, String testDescription) throws Throwable {
+
+
+		this.userId = userId;
+		GetJWT JWT = new GetJWT();
+		token = JWT.getToken(this.userId);
+
+	}
+
+	@Given("^Anna get network contact information for a user$")
+	public void anna_get_network_contact_information_for_a_user() throws Throwable {
+
+		this.endpoint = "api/v1/users/" + this.userId + "/networks";
+					
+		     	getUserContactInformationResponse = 	given().
+		     												header("X-Authorization", token).
+								            				relaxedHTTPSValidation().
+								            				urlEncodingEnabled(false).
+								            				contentType("application/json").
+								            			when().
+								            				get(this.endpoint);
+		     	
+		System.out.println(getUserContactInformationResponse.jsonPath().prettyPrint());
+
+		if ((getUserContactInformationResponse.statusCode() != 200)
+				|| (getUserContactInformationResponse.statusCode() == 404)) {
+			System.out.println("Status Code--->" + getUserContactInformationResponse.statusCode());
+
+		}
+
+	}
+   
+	@Then("^Anna should see the request returning \'([^\"]*)\' with \"([^\"]*)\" for user network update$")
+	public void Anna_should_see_the_request_returning_with_for_user_network_update(int expectedstatuscode,
+			String statusmessage) throws Throwable {
+
+		System.out.println("Returned Status code for the request - " + getUserContactInformationResponse.statusCode());
+		// System.out.println("Put Account status message - "
+		// +putAddressInformationResponse.body().jsonPath().get("message"));
+
+		Assert.assertTrue("Network update Service is NOT Running fine",
+				expectedstatuscode == getUserContactInformationResponse.statusCode());
+		if (getUserContactInformationResponse.statusCode() != 200) {
+			Assert.assertEquals(statusmessage, getUserContactInformationResponse.jsonPath().get("message"));
+		}
+
+	}
+
+	//@Then("^Anna is able to view user network contact information \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	@Then("^Anna is able to view user network contact information \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"  \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\"$")
+	public void anna_is_able_to_view_updated_user_network_contact_information(String expectedclaimNumber,
+			String expectedemail, String expectedname, String expecteduserId,String expectedType, String expectedworkingHoursDescription, String expectedphoneNumber)
+			throws Throwable {
+		
+		//	String[] claimNumbers = null;
+			boolean claimFound = false;
+			//ArrayList<String> arr   = null;
+			//String[] arr = null;
+			List<String> arr = new ArrayList<String>();
+			
+			
+		if (getUserContactInformationResponse.statusCode() == 200) {
+			int size = getUserContactInformationResponse.jsonPath().getList("contacts").size();
+
+			//List<String> claimNumberList = getUserContactInformationResponse.jsonPath().getList("contacts.claimNumberList");
+			List<String> claimNumberList = getUserContactInformationResponse.jsonPath().getList("contacts.claimNumberList");
+			
+			List<String> email = getUserContactInformationResponse.jsonPath().getList("contacts.email");
+			List<String> name = getUserContactInformationResponse.jsonPath().getList("contacts.name");
+			List<String> phoneNumber = getUserContactInformationResponse.jsonPath().getList("contacts.phoneNumber");
+			List<String> userId = getUserContactInformationResponse.jsonPath().getList("contacts.userId");
+			List<String> workingHoursDescription = getUserContactInformationResponse.jsonPath().getList("contacts.workingHoursDescription");
+			List<String> type = getUserContactInformationResponse.jsonPath().getList("contacts.type");
+			
+			for (int i = 0; i < size; i++) {
+				
+				  int i_claimNumber = claimNumberList.size();
+				  		
+				  			Object[] claimNumbersArr = claimNumberList.toArray();
+				  			String  claimNumbers = null;
+				  			String[] C_numbers = null;
+				  			String claimNumber = null;
+				  			int claimNumbersCnt = claimNumbersArr.length;
+				  				for (int j = 0; j < claimNumbersCnt; j++) {
+				  					
+				  					claimNumbers = String.valueOf(claimNumbersArr[j]);
+				  					C_numbers = claimNumbers.split(",");
+				  					
+				  					for (int k = 0; k < C_numbers.length; k++) {
+										claimNumber = C_numbers[k].trim().replace("[", "").replace("]", "");
+				  						if (expectedclaimNumber.trim().equals(claimNumber)) {
+											  System.out.println("ClaimNumber:         "+ claimNumber);
+											  System.out.println("expectedclaimNumber: "+expectedclaimNumber);
+											  claimFound = true;
+											  break;
+										}										
+									} 
+							}
+
+				  				
+				  System.out.println("email:         "+ email.get(i));
+				  System.out.println("expectedemail: "+expectedemail); 
+				  System.out.println("name:          "+ name.get(i));
+				  System.out.println("expectedname:  "+expectedname);
+				  System.out.println("phoneNumber:         "+ phoneNumber.get(i));
+				  System.out.println("expectedphoneNumber: "+expectedphoneNumber);
+				  System.out.println("userId:         "+ userId.get(i));
+				  System.out.println("expecteduserId: "+ expecteduserId);
+				  System.out.println("Type:         "+ type.get(i));
+				  System.out.println("expectedType: "+ expectedType);				  
+				  //System.out.println("workingHoursDescription:         "+ workingHoursDescription.get(i));
+				  //System.out.println("expectedworkingHoursDescription: "+ expectedworkingHoursDescription);				  
+				  System.out.println("<----------------------------------------->");
+				     
+				 
+
+				if (claimFound && 
+						expectedemail.trim().equals(email.get(i).trim()) && 
+						expectedname.trim().equals(name.get(i).trim()) &&
+						expectedphoneNumber.trim().equals(phoneNumber.get(i).trim()) &&
+						expectedType.trim().equals(type.get(i).trim())  && 						
+						expecteduserId.trim().equals(userId.get(i).trim())) {
+					this.flagPassFail = true;
+					break;
+				}
+			}
+
+			Assert.assertTrue(this.flagPassFail);
+
+		}
+
+	}
+}
+

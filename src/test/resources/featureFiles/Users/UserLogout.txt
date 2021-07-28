@@ -1,0 +1,13 @@
+Feature: Service to Logout the ACC user if it is inactive UP and RUNNING - POST /api/v1/users/{userId}/logout
+  			Actor: Anna is an existing ACC client which is inactive for long time.
+
+  @css @user @ignore 
+  Scenario Outline: Logout the user for MyACC (Client Self Service Portal)
+    Given Anna is ACC user "<RequestType>" on "<endpoint>" with existing account
+    When Anna is inactive for long time
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for logout
+
+    Examples: Anna is logout from MyAcc
+      | RequestType | endpoint | statuscode | statusmessage |
+      | GET         | users    |        200 |               |
+      | GET         | users    |        200 |               |

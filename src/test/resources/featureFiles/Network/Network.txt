@@ -1,0 +1,14 @@
+Feature: List of all the network contact not associated with user servie is UP and RUNNING - GET /api/v1/network
+  			 Actor: Anna has permision to get all contacts
+
+  @css @network @smoke @regression
+  Scenario Outline: Get the network contact information
+    Given Anna has permision to get all contacts
+    When Anna get network contact information
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for network update
+    And Anna is able to view all network contact information
+
+    Examples: Anna update on network contact service
+      | statuscode | statusmessage |
+      |        200 |               |
+

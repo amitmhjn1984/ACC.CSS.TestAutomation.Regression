@@ -1,0 +1,9 @@
+testEnvironment=UAT
+
+#UAT
+url=https://client-int-uat.apps-test.ds.acc.co.nz/
+#url=https://myacc-dev/api/search/
+jdbc.url = jdbc:sqlserver://AZU-SYD-PDD-ASQ-002.database.windows.net:1433;databaseName=AZU-SYD-PDD-SDB-CSS031
+db.username=SVC_CSS_OWNER_UAT 
+db.password=5unnyM0nd@y!
+os=windows

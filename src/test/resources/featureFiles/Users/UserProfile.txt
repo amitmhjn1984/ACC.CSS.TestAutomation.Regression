@@ -1,0 +1,49 @@
+Feature: Check user profile retrieve servie is UP and RUNNING - GET /api/v1/users/{userId}/profile
+
+  @css @userstest @smoke @regression
+  Scenario Outline: Getting the user profile information
+    Given Anna is ACC user with existing profile "<userId>"
+    When Anna get profile information
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for profile
+    And Anna is able to view updated profile information "<firstName>" "<middleName>" "<surName>" "<gender>" "<nhiNumber>" "<dateOfBrith>" "<confirmDeclaration>"
+
+    Examples: Anna checking on User profile service
+      | userId    | firstName | middleName     | surName  | gender | nhiNumber | dateOfBrith    | confirmDeclaration | statuscode | statusmessage                |
+      | C7383508  | Jason     | Iain Alexander | Kirkwood | Male   | EZT3935   |   259848000000 | true               |        200 |                              |
+      | 333333333 |           |                |          |        |           |                |                    |        401 | Invalid Authorization header |
+      |  17236944 | Clark     | TestMe         | Kent     | Male   | SSD2342   | -2114422200000 | true               |        200 |                              |
+
+  #@css @userstest @smoke @regression
+  #Scenario Outline: Getting the user profile information
+    #Given Anna is ACC user with existing profile "<userId>"
+    #When Anna get profile information
+    #Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for profile
+    #And Anna is able to view contact information "<workCountryCode>" "<workAreaCode>" "<workPhoneNumber>" "<workExtension>" "<mobileCountryCode>" "<mobileAreaCode>" "<mobilePhoneNumber>" "<mobileExtension>" "<emailAddress>"
+#
+    #Examples: Anna checking on User profile service
+      #| userId   | workCountryCode | workAreaCode | workPhoneNumber | workExtension | mobileCountryCode | mobileAreaCode | mobilePhoneNumber | mobileExtension | emailAddress            | statuscode | statusmessage |
+      #| 17236944 | +64             |         0800 |       123343434 |            03 |                   |            021 |          46111111 |                 | Invalid@Invalid.Invalid |        200 |               |
+
+  @css @userstest @smoke @regression
+  Scenario Outline: Getting the user profile information
+    Given Anna is ACC user with existing profile "<userId>"
+    When Anna get profile information
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for profile
+    And Anna is able to view account information "<weeklyCompBankName>" "<weeklyCompAccountNumber>" "<weeklyCompIrdNumberr>" "<weeklyCompTaxCode>"
+
+    Examples: Anna checking on User profile service
+      | userId   | weeklyCompBankName | weeklyCompAccountNumber     | weeklyCompIrdNumberr | weeklyCompTaxCode | statuscode | statusmessage |
+      | 17236944 |                    | 02-1232-0227321-001         |            073666651 | M                 |        200 |               |
+      
+
+  #@css @userstest @smoke @regression
+  #Scenario Outline: Getting the user profile information
+    #Given Anna is ACC user with existing profile "<userId>"
+    #When Anna get profile information
+    #Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for profile
+    #And Anna is able to view address information "<type>" "<line1>" "<line2>" "<suburb>" "<city>" "<postCode>" "<country>"
+#
+    #Examples: Anna checking on User profile service
+      #| userId   | type        | line1     | line2  | suburb | city       | postCode | country     | statuscode | statusmessage |
+      #| 17236944 | Home        | 5 Will St | Cental | CBD    | Wellington |     6012 | New Zealand |        200 |               |
+      #| 17236944 | Alternative | 5 Will St | Cental | CBD    | Wellington |     5315 | New Zealand |        200 |               |

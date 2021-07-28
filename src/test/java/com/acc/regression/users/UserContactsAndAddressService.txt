@@ -1,0 +1,348 @@
+package com.acc.regression.users;
+
+import java.net.URLEncoder;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
+import com.acc.regression.GetJWT;
+import com.acc.regression.GetUser;
+import com.acc.regression.InitializeTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.restassured.RestAssured;
+import com.jayway.restassured.http.ContentType;
+import com.jayway.restassured.response.Response;
+import com.jayway.restassured.specification.RequestSpecification;
+
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+import org.junit.Assert;
+import static com.jayway.restassured.RestAssured.given;
+import static io.restassured.path.json.JsonPath.from;
+
+@SuppressWarnings("unchecked")
+public class UserContactsAndAddressService extends InitializeTest {
+	String endpoint = null;
+	String userId = null;
+	String token= null;
+	boolean flagPassFail= false;
+
+//	JSONObject contacts = new JSONObject();
+	JSONObject addressandcontacts = new JSONObject();
+	JSONObject contactnumber = new JSONObject();
+	JSONObject thecontacts = new JSONObject();
+	JSONObject theaddress = new JSONObject();
+	JSONObject mobilenumber = new JSONObject();
+	JSONArray addressesArray = new JSONArray();
+	
+
+	Response getContactInformationResponse;
+	Response getAddressInformationResponse;
+	Response putAddressAndContactInformationResponse;
+
+	
+    List <String> addresstypelist = new ArrayList<String>();
+    List <String> line1 = new ArrayList<String>();
+    List <String> line2 = new ArrayList<String>();
+    List <String> suburb = new ArrayList<String>();
+    List <String> city = new ArrayList<String>();
+    List <String> postCode = new ArrayList<String>();
+    List <String> country = new ArrayList<String>();
+
+	@Given("^Anna is ACC user with existing contact and address$")
+	public void anna_is_existing_ACC_user_with_existing_contact_and_address() throws Throwable {
+		GetUser user = new GetUser();
+		user.selectRandomUser();
+		this.userId = accUser;
+		
+		System.out.println("---------User id--->" + this.userId);
+		
+		GetJWT JWT = new GetJWT();
+		token = JWT.getToken(this.userId);
+	}
+
+	@Given("^Anna get contact information$")
+	public void Anna_get_contact_information() throws Throwable {
+
+		this.endpoint = "api/v1/users/" + this.userId + "/contacts";
+
+		getContactInformationResponse = given().
+											header("X-Authorization", token).
+											relaxedHTTPSValidation().
+											urlEncodingEnabled(false).
+											contentType("application/json").
+										when().
+											get(this.endpoint);
+
+		if ((getContactInformationResponse.statusCode() != 200)
+				|| (getContactInformationResponse.statusCode() == 404)) {
+
+			System.out.println("-------------Unable to get the contact information for UserId--->" + this.userId);
+			System.out.println("-------------Status Code--->" + getContactInformationResponse.statusCode());
+
+		}
+
+		setContactInformation();
+	}
+	
+	@Given("^Anna is ACC user with empty phone nuber and \"([^\"]*)\"$")
+	public void Anna_is_ACC_user_with_empty_phone_number(String userID) throws Throwable{
+	//	GetUser user = new GetUser();
+	//	user.selectRandomUser();
+		this.userId = userID;
+		
+		System.out.println("---------User id--->" + this.userId);
+		
+		GetJWT JWT = new GetJWT();
+		token = JWT.getToken(this.userId);
+	}
+	
+	@Given("^Anna get address information$")
+	public void Anna_get_address_information() throws Throwable {
+
+		this.endpoint = "api/v1/users/" + this.userId + "/addresses";
+
+		getAddressInformationResponse = given().
+											header("X-Authorization", token).
+											relaxedHTTPSValidation().
+											urlEncodingEnabled(false).
+											contentType("application/json").
+										when().
+											get(this.endpoint);
+
+		if ((getAddressInformationResponse.statusCode() != 200)
+				|| (getAddressInformationResponse.statusCode() == 404)) {
+
+			System.out.println("-------------Unable to get the address information for UserId--->" + this.userId);
+			System.out.println("-------------Status Code--->" + getAddressInformationResponse.statusCode());
+
+		}
+
+		setAddressInformation();
+	}
+
+
+	@When("^Anna update ACC address and contact \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" information$")
+	public void anna_update_ACC_home_contact_information(String contactType, String emailAddress, String contactAreaCode, String contactCountryCode,
+			String contactPhoneNumber, String contactExtension, String addressType, String line1, String line2, String suburb, String city, String postCode, String country) throws Throwable {
+
+		this.endpoint = "api/v1/users/" + this.userId + "/addressesandcontacts";
+		
+		//set contact JSON
+		if (!emailAddress.trim().equals("")){
+			thecontacts.put("emailAddress", emailAddress);
+		}
+			
+		if(!contactType.trim().equals("")){		
+			contactnumber.put("areaCode", contactAreaCode);		
+			contactnumber.put("countryCode", contactCountryCode);		
+			contactnumber.put("phoneNumber", contactPhoneNumber);		
+			contactnumber.put("extension", contactExtension);			
+			thecontacts.put(contactType, contactnumber);
+			
+		}
+		
+	
+		//set address JSON
+		if (!addressType.trim().equals("")){
+			theaddress.put("type", addressType);
+			theaddress.put("line1", line1);
+			theaddress.put("line2", line2);
+			theaddress.put("suburb", suburb);
+			theaddress.put("city", city);
+			theaddress.put("postCode", postCode);
+			theaddress.put("country", country);
+			if(addressType.trim().equals("HOME")){
+			theaddress.put("correspondence", "false");
+			}
+			if(addressType.trim().equals("ALTERNATIVE")){
+				theaddress.put("correspondence", "true");
+			}
+				
+			//add address into the list
+			this.addresstypelist = getAddressInformationResponse.jsonPath().getList("type");		
+			int index = this.addresstypelist.indexOf(addressType);
+			if (index != -1) {
+				
+				addressesArray.remove(index);
+				addressesArray.add(index, theaddress);
+			}		
+			if (index == -1)
+			{
+			addressesArray.add(theaddress);
+			}			
+		}
+		
+		//Set the address and contact JSON combined with both 
+		addressandcontacts.put("addresses", addressesArray);
+		addressandcontacts.put("contact", thecontacts);
+		
+
+		ObjectMapper mapper = new ObjectMapper();
+		System.out.println("-------------the put message data-------------"+mapper.writerWithDefaultPrettyPrinter().writeValueAsString(addressandcontacts));
+
+		//send out the put request
+		putAddressAndContactInformationResponse = given().
+				header("X-Authorization", token).
+				relaxedHTTPSValidation().
+				urlEncodingEnabled(false).
+				contentType("application/json").
+				body(addressandcontacts).
+			when().
+				put(this.endpoint);
+
+       //validate put request result 
+       if (putAddressAndContactInformationResponse.statusCode() != 200) {
+             System.out.println( "-------------Unable to update the address and contact information Status Code--->"+ putAddressAndContactInformationResponse.statusCode());
+             }
+	}
+
+	
+	@Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" for contacts and address$")
+	public void Anna_should_see_the_request_returning_with(int expectedstatuscode, String statusmessage)
+			throws Throwable {
+
+		System.out.println("-------------Returned Status code for the request - " + putAddressAndContactInformationResponse.statusCode());
+		System.out.println(
+				"--------------Put contact status message - " + putAddressAndContactInformationResponse.body().jsonPath().get("message"));
+
+		Assert.assertTrue("Updating address and contact Service is NOT Running fine",
+				expectedstatuscode == putAddressAndContactInformationResponse.statusCode());
+	    
+			Assert.assertTrue(putAddressAndContactInformationResponse.body().jsonPath().get("message").toString().contains(statusmessage));
+	}
+
+	@Then("^Anna is able to view updated contact and address information$")
+	public void anna_is_able_to_view_updated_address_and_contact_information() throws Throwable {
+	
+		//validate contact information 
+		if (putAddressAndContactInformationResponse.statusCode() == 200) {
+			this.endpoint = "api/v1/users/" + this.userId + "/contacts";
+			
+			getContactInformationResponse = given().
+												header("X-Authorization", token).
+												relaxedHTTPSValidation().
+												urlEncodingEnabled(false).
+												contentType("application/json").
+											when().
+												get(this.endpoint);
+
+			Assert.assertEquals(putAddressAndContactInformationResponse.jsonPath().get("addressesAndContacts.contact"),
+					getContactInformationResponse.jsonPath().get());
+			
+		}
+		
+		
+		//validate address information 
+		if(putAddressAndContactInformationResponse.statusCode()==200){
+			this.endpoint = "api/v1/users/" + this.userId + "/addresses";
+        	getAddressInformationResponse = 	given().
+    											header("X-Authorization", token).
+							    				relaxedHTTPSValidation().
+							    				urlEncodingEnabled(false).
+							    				contentType("application/json").
+							    			when().
+							    				get(this.endpoint);
+    	
+        	String putupdatedResponseString;
+        	String getupdatedResponseString;   	
+      	
+   	
+        	putupdatedResponseString = putAddressAndContactInformationResponse.body().jsonPath().getList("addressesAndContacts.addresses").toString();
+        	getupdatedResponseString = getAddressInformationResponse.body().jsonPath().get().toString();
+        	System.out.println("--------------the address string excepted value------------\n"+ putupdatedResponseString);
+    	    System.out.println("--------------the address string actual value--------------\n" + getupdatedResponseString);
+		  
+		     Assert.assertEquals(putupdatedResponseString,getupdatedResponseString);
+
+		}	
+	}
+
+	
+	@Then("^Anna should see the error message \"([^\"]*)\" in error feild \"([^\"]*)\"$")
+	public void Anna_should_see_the_error_msg_and_feild(String errorMsg, String errorFeild)
+			throws Throwable {
+		
+		String returnFullErrorMessage;
+		if (putAddressAndContactInformationResponse.statusCode() == 200 || putAddressAndContactInformationResponse.body().jsonPath().get("errors") ==null)
+		{
+			System.out.println("-------------Returned Status code is 200, no error message");
+		}
+		else{	
+		returnFullErrorMessage = putAddressAndContactInformationResponse.body().jsonPath().get("errors").toString();
+		System.out.println("-------------Full error message is:" +returnFullErrorMessage);
+		
+		Assert.assertTrue("Error message is not returned",returnFullErrorMessage.contains(errorMsg));
+		Assert.assertTrue("Error feild is not returned",returnFullErrorMessage.contains(errorFeild));
+		}
+	}
+	
+	
+	public void setContactInformation() throws Throwable {
+		if ((getContactInformationResponse.statusCode() != 404)) {
+			String getContactString = getContactInformationResponse.asString();
+			JSONParser parser = new JSONParser();
+			this.thecontacts = (JSONObject) parser.parse(getContactString);
+			String mobilePhoneAreacode = getContactInformationResponse.jsonPath().getString("mobile.areaCode");
+			String mobilePhoneNuber = getContactInformationResponse.jsonPath().getString("mobile.phoneNuber");
+			String origialemailaddress = getContactInformationResponse.jsonPath().getString("emailAddress");
+		
+			
+			if(mobilePhoneAreacode=="" && (mobilePhoneNuber!="") && (mobilePhoneNuber!=null)){
+
+				this.mobilenumber.put("areaCode", "021");
+				this.mobilenumber.put("extension", getContactInformationResponse.jsonPath().getString("mobile.extension"));
+				this.mobilenumber.put("phoneNumber", mobilePhoneNuber);
+				this.mobilenumber.put("countryCode", getContactInformationResponse.jsonPath().getString("mobile.countryCode"));
+				this.thecontacts.put("mobile", mobilenumber);
+			}
+			
+			int emailindex = origialemailaddress.indexOf("Invalid");
+			if (emailindex != -1) {
+				String newEmailAddress = "cqi@testing.com";
+				this.thecontacts.put("emailAddress", newEmailAddress);
+			}	
+			
+			
+		}
+
+	}
+	
+	
+	public void setAddressInformation() throws Throwable {
+		if ((getAddressInformationResponse.statusCode() != 404)) {
+			String getAddressString = getAddressInformationResponse.asString();
+			JSONParser parser = new JSONParser();
+			this.addressesArray = (JSONArray) parser.parse(getAddressString);
+
+			
+		}
+
+	}
+	
+	
+	protected String getSaltString() {
+        String SALTCHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+        StringBuilder salt = new StringBuilder();
+        Random rnd = new Random();
+        while (salt.length() < 5) { // length of the random string.
+            int index = (int) (rnd.nextFloat() * SALTCHARS.length());
+            salt.append(SALTCHARS.charAt(index));
+        }
+        String saltStr = salt.toString();
+        return saltStr;
+
+    }
+
+}

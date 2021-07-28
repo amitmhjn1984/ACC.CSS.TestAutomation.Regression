@@ -1,0 +1,320 @@
+//package com.acc.regression.users;
+//
+//import java.net.URLEncoder;
+//
+//import java.util.ArrayList;
+//import java.util.List;
+//import java.util.Map;
+//import java.util.Random;
+//import java.util.concurrent.ThreadLocalRandom;
+//import java.util.regex.Matcher;
+//import java.util.regex.Pattern;
+//
+//import org.json.simple.JSONArray;
+//import org.json.simple.JSONObject;
+//import org.json.simple.parser.JSONParser;
+//import org.json.simple.parser.ParseException;
+//
+//import com.acc.regression.GetJWT;
+//import com.acc.regression.GetUser;
+//import com.acc.regression.InitializeTest;
+//import com.fasterxml.jackson.databind.ObjectMapper;
+//import com.jayway.restassured.RestAssured;
+//import com.jayway.restassured.http.ContentType;
+//import com.jayway.restassured.response.Response;
+//import com.jayway.restassured.specification.RequestSpecification;
+//
+//import cucumber.api.java.en.Given;
+//import cucumber.api.java.en.Then;
+//import cucumber.api.java.en.When;
+//import org.junit.Assert;
+//import static com.jayway.restassured.RestAssured.given;
+//import static io.restassured.path.json.JsonPath.from;
+//
+//@SuppressWarnings("unchecked")
+//public class UserContactsService extends InitializeTest {
+//	String endpoint = null;
+//	String userId = null;
+//	String token= null;
+//
+//	JSONObject contacts = new JSONObject();
+//	JSONObject home = new JSONObject();
+//	JSONObject work = new JSONObject();
+//	JSONObject fax = new JSONObject();
+//	JSONObject mobile = new JSONObject();
+//
+//	Response getContactInformationResponse;
+//	Response putContactInformationResponse;
+//
+//	@Given("^Anna is ACC user with existing contact$")
+//	public void anna_is_existing_ACC_user_with_existing_contact() throws Throwable {
+//		GetUser user = new GetUser();
+//		user.selectRandomUser();
+//		this.userId = accUser;
+//		
+//		
+//		GetJWT JWT = new GetJWT();
+//		token = JWT.getToken(this.userId);
+//	}
+//
+//	@Given("^Anna get contact information$")
+//	public void Anna_get_account_information() throws Throwable {
+//
+//		this.endpoint = "api/v1/users/" + this.userId + "/contacts";
+//
+//		getContactInformationResponse = given().
+//											header("X-Authorization", token).
+//											relaxedHTTPSValidation().
+//											urlEncodingEnabled(false).
+//											contentType("application/json").
+//										when().
+//											get(this.endpoint);
+//
+//		if ((getContactInformationResponse.statusCode() != 200)
+//				|| (getContactInformationResponse.statusCode() == 404)) {
+//
+//			System.out.println("Unable to get the contact information for UserId--->" + this.userId);
+//			System.out.println("Status Code--->" + getContactInformationResponse.statusCode());
+//
+//		}
+//
+//		setContactInformation();
+//	}
+//
+//	@When("^Anna update ACC home contact \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" information$")
+//	public void anna_update_ACC_home_contact_information(String emailAddress, String homeAreaCode, String homeCountryCode,
+//			String homePhoneNumber, String homeExtension) throws Throwable {
+//
+//		if (!emailAddress.trim().equals("")){
+//			String random = getSaltString();
+//			String sub = emailAddress.substring(0, emailAddress.indexOf("@"));
+//			emailAddress = sub+random +emailAddress.substring(emailAddress.indexOf("@"),emailAddress.length());;
+//			contacts.put("emailAddress", emailAddress);
+//		}
+//			
+//
+//		if (!homeAreaCode.trim().equals(""))
+//			home.put("areaCode", homeAreaCode);
+//
+//		if (!homeCountryCode.trim().equals(""))
+//			home.put("countryCode", homeCountryCode);
+//
+//		if (!homePhoneNumber.trim().equals(""))
+//			home.put("phoneNumber", homePhoneNumber);
+//
+//		if (!homeExtension.trim().equals(""))
+//			home.put("extension", homeExtension);
+//
+//		contacts.put("home", home);
+//
+//		ObjectMapper mapper = new ObjectMapper();
+//		System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(contacts));
+//
+//		putContactInformationResponse = given().
+//											header("X-Authorization", token).
+//											relaxedHTTPSValidation().
+//											urlEncodingEnabled(false).
+//											contentType("application/json").
+//											body(contacts).
+//										when().
+//											put(this.endpoint);
+//
+//		// System.out.println(putContactInformationResponse.jsonPath().prettyPrint());
+//		if (putContactInformationResponse.statusCode() != 200) {
+//			System.out.println("Unable to update the contact information Status Code--->"
+//					+ putContactInformationResponse.statusCode());
+//
+//		}
+//	}
+//
+//	@When("^Anna update ACC work contact \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" information$")
+//	public void anna_update_ACC_work_contact_information(String emailAddress, String workAreaCode, String workCountryCode,
+//			String workPhoneNumber, String workExtension) throws Throwable {
+//
+//		if (!emailAddress.trim().equals("")){
+//			String random = getSaltString();
+//			String sub = emailAddress.substring(0, emailAddress.indexOf("@"));
+//			emailAddress = sub+random +emailAddress.substring(emailAddress.indexOf("@"),emailAddress.length());;
+//			contacts.put("emailAddress", emailAddress);
+//		}
+//
+//		if (!workAreaCode.trim().equals(""))
+//			work.put("areaCode", workAreaCode);
+//
+//		if (!workCountryCode.trim().equals(""))
+//			work.put("countryCode", workCountryCode);
+//
+//		if (!workPhoneNumber.trim().equals(""))
+//			work.put("phoneNumber", workPhoneNumber);
+//
+//		if (!workExtension.trim().equals(""))
+//			work.put("extension", workExtension);
+//
+//		contacts.put("work", work);
+//
+//		ObjectMapper mapper = new ObjectMapper();
+//		System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(contacts));
+//
+//		putContactInformationResponse = given().
+//											header("X-Authorization", token).
+//											relaxedHTTPSValidation().
+//											urlEncodingEnabled(false).
+//											contentType("application/json").
+//											body(contacts).
+//										when().
+//											put(this.endpoint);
+//
+//		// System.out.println(putContactInformationResponse.jsonPath().prettyPrint());
+//		if (putContactInformationResponse.statusCode() != 200) {
+//			System.out.println("Unable to update the contact information Status Code--->"
+//					+ putContactInformationResponse.statusCode());
+//
+//		}
+//	}
+//	@When("^Anna update ACC fax contact \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" information$")
+//	public void anna_update_ACC_fax_contact_information(String emailAddress, String faxAreaCode, String faxCountryCode,
+//			String faxPhoneNumber, String faxExtension) throws Throwable {
+//
+//		if (!emailAddress.trim().equals("")){
+//			String random = getSaltString();
+//			String sub = emailAddress.substring(0, emailAddress.indexOf("@"));
+//			emailAddress = sub+random +emailAddress.substring(emailAddress.indexOf("@"),emailAddress.length());;
+//			contacts.put("emailAddress", emailAddress);
+//		}
+//
+//		if (!faxAreaCode.trim().equals(""))
+//			fax.put("areaCode", faxAreaCode);
+//
+//		if (!faxCountryCode.trim().equals(""))
+//			fax.put("countryCode", faxCountryCode);
+//
+//		if (!faxPhoneNumber.trim().equals(""))
+//			fax.put("phoneNumber", faxPhoneNumber);
+//
+//		if (!faxExtension.trim().equals(""))
+//			fax.put("extension", faxExtension);
+//
+//		contacts.put("fax", fax);
+//
+//		ObjectMapper mapper = new ObjectMapper();
+//		System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(contacts));
+//
+//		putContactInformationResponse = given().
+//											header("X-Authorization", token).
+//											relaxedHTTPSValidation().
+//											urlEncodingEnabled(false).
+//											contentType("application/json").
+//											body(contacts).
+//										when().
+//											put(this.endpoint);
+//
+//		// System.out.println(putContactInformationResponse.jsonPath().prettyPrint());
+//		if (putContactInformationResponse.statusCode() != 200) {
+//			System.out.println("Unable to update the contact information Status Code--->"
+//					+ putContactInformationResponse.statusCode());
+//
+//		}
+//	}
+//	
+//	@When("^Anna update ACC mobile contact \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" \"([^\"]*)\" information$")
+//	public void anna_update_ACC_mobile_contact_information(String emailAddress, String mobileAreaCode, String mobileCountryCode,
+//			String mobilePhoneNumber, String mobileExtension) throws Throwable {
+//
+//		if (!emailAddress.trim().equals("")){
+//			String random = getSaltString();
+//			String sub = emailAddress.substring(0, emailAddress.indexOf("@"));
+//			emailAddress = sub+random +emailAddress.substring(emailAddress.indexOf("@"),emailAddress.length());;
+//			contacts.put("emailAddress", emailAddress);
+//		}
+//
+//		if (!mobileAreaCode.trim().equals(""))
+//			mobile.put("areaCode", mobileAreaCode);
+//		else
+//			mobile.put("areaCode", "");
+//		if (!mobileCountryCode.trim().equals(""))
+//			mobile.put("countryCode", mobileCountryCode);
+//
+//		if (!mobilePhoneNumber.trim().equals(""))
+//			mobile.put("phoneNumber", mobilePhoneNumber);
+//
+//		if (!mobileExtension.trim().equals(""))
+//			mobile.put("extension", mobileExtension);
+//		else
+//			mobile.put("extension", "");
+//
+//		contacts.put("mobile", mobile);
+//
+//		ObjectMapper mapper = new ObjectMapper();
+//		System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(contacts));
+//		System.out.println(contacts.toString());
+//
+//		putContactInformationResponse = given().
+//											header("X-Authorization", token).
+//											relaxedHTTPSValidation().
+//											urlEncodingEnabled(false).
+//											contentType("application/json").
+//											body(contacts).
+//										when().
+//											put(this.endpoint);
+//
+//		// System.out.println(putContactInformationResponse.jsonPath().prettyPrint());
+//		if (putContactInformationResponse.statusCode() != 200) {
+//			System.out.println("Unable to update the contact information Status Code--->"
+//					+ putContactInformationResponse.statusCode());
+//
+//		}
+//	}
+//	
+//	@Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" for contacts$")
+//	public void Anna_should_see_the_request_returning_with(int expectedstatuscode, String statusmessage)
+//			throws Throwable {
+//
+//		System.out.println("Returned Status code for the request - " + putContactInformationResponse.statusCode());
+//		System.out.println(
+//				"Put contact status message - " + putContactInformationResponse.body().jsonPath().get("message"));
+//
+//		Assert.assertTrue("UserContact Service is NOT Running fine",
+//				expectedstatuscode == putContactInformationResponse.statusCode());
+//		Assert.assertTrue(putContactInformationResponse.body().jsonPath().get("message").toString().contains(statusmessage));
+//	}
+//
+//	@Then("^Anna is able to view updated contact information$")
+//	public void anna_is_able_to_view_updated_contact_information() throws Throwable {
+//		if (putContactInformationResponse.statusCode() == 200) {
+//			getContactInformationResponse = given().
+//												header("X-Authorization", token).
+//												relaxedHTTPSValidation().
+//												urlEncodingEnabled(false).
+//												contentType("application/json").
+//											when().
+//												get(this.endpoint);
+//
+//			Assert.assertEquals(putContactInformationResponse.jsonPath().get("contact"),
+//					getContactInformationResponse.jsonPath().get());
+//
+//		}
+//
+//	}
+//
+//	public void setContactInformation() throws Throwable {
+//		if ((getContactInformationResponse.statusCode() != 404)) {
+//			String getContactString = getContactInformationResponse.asString();
+//			JSONParser parser = new JSONParser();
+//			this.contacts = (JSONObject) parser.parse(getContactString);
+//		}
+//
+//	}
+//	protected String getSaltString() {
+//        String SALTCHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+//        StringBuilder salt = new StringBuilder();
+//        Random rnd = new Random();
+//        while (salt.length() < 5) { // length of the random string.
+//            int index = (int) (rnd.nextFloat() * SALTCHARS.length());
+//            salt.append(SALTCHARS.charAt(index));
+//        }
+//        String saltStr = salt.toString();
+//        return saltStr;
+//
+//    }
+//
+//}

@@ -1,0 +1,57 @@
+package com.acc.regression.codetable;
+
+import static com.jayway.restassured.RestAssured.given;
+
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+
+import org.json.simple.JSONObject;
+import org.junit.Assert;
+
+import com.acc.regression.InitializeTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.restassured.response.Response;
+
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+
+public class Categories extends InitializeTest{
+	String endpoint=null;
+	String userId= null;
+    JSONObject bankAccounts = new JSONObject();
+    Response getCodeTableResponse;
+
+    //Anna get the list of code table  "<RequestType>" on "<endpoint>"
+    @When("^Anna get the list of code table  \"([^\"]*)\" on \"([^\"]*)\"$")
+    public void anna_get_the_list_of_code_table_on(String requestType, String endpoint) throws Throwable {
+    	this.endpoint = endpoint;
+    	
+    	getCodeTableResponse = 	given().
+									proxy("webproxy.ds.acc.co.nz", 8080).
+									relaxedHTTPSValidation().
+									urlEncodingEnabled(false).
+									contentType("application/json").
+								when().
+									get(this.endpoint);
+    	
+    	System.out.println("Code Table list- " + getCodeTableResponse.jsonPath().prettyPrint());
+    	if ((getCodeTableResponse.statusCode() != 200)||(getCodeTableResponse.statusCode() == 404) ) {
+        	System.out.println("Unable to get the account information for UserId--->"+this.userId);
+        	System.out.println("Status Code--->"+getCodeTableResponse.statusCode());
+        }
+
+    }
+
+   
+    @Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" for code table$")
+    public void Anna_should_see_the_request_returning_with_for_code_table(int expectedstatuscode, String expectedStatusMessage) throws Throwable {
+
+        System.out.println("Returned Status code for the request - " + getCodeTableResponse.statusCode());
+        System.out.println("Expected status message - " +expectedStatusMessage);
+        
+        Assert.assertTrue("UserAccount Service is Running fine", 
+                expectedstatuscode == getCodeTableResponse.statusCode());
+       }
+
+}

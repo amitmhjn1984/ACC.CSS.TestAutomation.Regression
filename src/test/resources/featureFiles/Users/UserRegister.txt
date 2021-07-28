@@ -1,0 +1,12 @@
+Feature: Register Anna details to join client self service portal is UP and RUNNING - POST /api/v1/users/register
+  			Actor: Anna is ACC client.
+
+  @css @user @ignore 
+  Scenario Outline: Register user to CSS
+    Given Anna register her details MyACC portal "<RequestType>" on "<endpoint>"
+    When Anna provide registration details "<confirmDeclaration>" "<dateofBirth>" "<email>" "<id>" "<password>" "<uniqueCode>"  to join CSS
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for register
+
+    Examples: Anna get the invite
+      | RequestType | endpoint               | confirmDeclaration | dateofBirth | email | id | password | uniqueCode | statuscode | statusmessage           |
+      | POST        | /api/v1/users/register | true               |             |       |    |          |            |        200 | Account details updated |

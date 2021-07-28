@@ -1,0 +1,94 @@
+package com.acc.regression.users;
+
+import java.net.URLEncoder;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+
+import com.acc.regression.InitializeTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.restassured.RestAssured;
+import com.jayway.restassured.response.Response;
+import com.jayway.restassured.specification.RequestSpecification;
+
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+import org.junit.Assert;
+import static com.jayway.restassured.RestAssured.given;
+import static io.restassured.path.json.JsonPath.from;
+
+
+
+    @SuppressWarnings("unchecked")
+    public class UserLogout extends InitializeTest {
+    	String endpoint=null;
+    	String userId= null;
+
+    	Response postLogoutResponse;
+
+
+        
+//        @Given("^Anna is ACC user \"([^\"]*)\" on \"([^\"]*)\" with existing account$")
+//        public void anna_is_existing_ACC_user_on_with_existing_account_information(String RequestType, String endpoint) throws Throwable {
+//        	//TODO - Refactor this method to get all users
+//        	//TODO - Then add the filter to get the specific type of user
+//        	getUserId(endpoint);
+//        	
+//            if (response.statusCode() != 200) {
+//            	System.out.println(environment+" Environment seems unstable");
+//
+//            }
+//            else
+//            {
+//            	List<String> lists = response.jsonPath().getList("id.flatten()");
+//            	int totalNumberOfUser = lists.size();
+//            	int randomUser = ThreadLocalRandom.current().nextInt(0, totalNumberOfUser);
+//            	this.userId = lists.get(randomUser);
+//            	accUser= lists.get(randomUser);
+//            }
+//        }
+
+
+        @When("^Anna is inactive for long time$")
+        public void anna_is_inactive_for_long_time() throws Throwable {
+        	System.out.println("This is the userId: "  +accUser);	
+        	this.endpoint = "/api/v1/users/"+ accUser+"/logout";
+             
+        	postLogoutResponse = 	given().
+            		 						proxy("webproxy.ds.acc.co.nz", 8080).
+					            		 	relaxedHTTPSValidation().
+					            		 	urlEncodingEnabled(false).
+					            		 	contentType("application/json").
+					            	when().
+					            			post(this.endpoint);
+             
+             //System.out.println(putAccountInformationResponse.jsonPath().prettyPrint());
+             if (postLogoutResponse.statusCode() != 200) {
+             	System.out.println("Unable to update the account information Status Code--->"+ postLogoutResponse.statusCode());
+
+             }
+        }
+        
+
+        @Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" for logout$")
+        public void Anna_should_see_the_request_returning_with_for_logout(int expectedstatuscode, String expectedStatusMessage) throws Throwable {
+
+            System.out.println("Returned Status code for the request - " + postLogoutResponse.statusCode());
+            System.out.println("Expected status message - " +expectedStatusMessage);
+           // System.out.println("Put Account status message - " +postLogoutResponse.body().jsonPath().get("message"));
+            
+            Assert.assertTrue("UserAccount Service is Running fine", 
+                    expectedstatuscode == postLogoutResponse.statusCode());
+            
+        	//Assert.assertEquals(expectedStatusMessage, postLogoutResponse.body().jsonPath().get("message"));
+           }
+
+    }

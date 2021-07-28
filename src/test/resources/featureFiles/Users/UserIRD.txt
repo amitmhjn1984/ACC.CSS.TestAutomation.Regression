@@ -1,0 +1,46 @@
+Feature: Update user IRD number is UP and RUNNING - PUT /api/v1/users/{userId}/ird/{irdNumber}
+  			Actor: Anna is an existing ACC client.
+
+  @css @users @regression @smoke
+  Scenario Outline: Updating user IRD Number
+    Given Anna want to update her IRD number with "<Description>"
+    When Anna update IRD number "<ird>" using "<partyId>"myACC portal
+    Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for IRD
+    And Anna IRD number is updated
+
+    Examples: Anna get the invite
+      | Description                 | ird         | partyId  | statuscode | statusmessage               |
+      | IRD number with dash       | 110-647-514 | 12236805 |        400 | Request message format error |
+      | Valid ird without dash     |   110647514 | 12236805 |        409 | IRD number already exists    |
+      | party id does not exist    |   110647514 | 27198907 |        401 | Unauthorized                 |
+      | Invalid party id           |   110647514 |        0 |        401 | Unauthorized                 |
+      | Invalid IRD number 6 digit |     8648129 | 12236805 |        400 | Request message format error |
+      | valid IRD number 9 digit   |   130294901 | 12236805 |        409 | IRD number already exists    |
+      | Invalid IRD number 8 digit |    11111111 | 12236805 |        400 | Request message format error |
+      | Invalid IRD number 9 digit |   222222223 | 12236805 |        400 | Request message format error |
+      | Invalid IRD number 10 digit|   1234567890| 12236805 |        400 | Request message format error |
+      |Valid IRD number 8digit and 0|   069760538 | 12236805 |       409 | IRD number already exists    |
+      | Valid IRD number 8digit     |   69760538  | 12236805 |       409 | IRD number already exists    |
+
+  #for dev env --party id only exists in dev env    
+  #@css @users @regression @smoke
+  #Scenario Outline: Updating user IRD Number
+    #Given Anna want to update her IRD number with "<Description>"
+    #When Anna update IRD number "<ird>" using "<partyId>"myACC portal
+    #Then Anna should see the request returning '<statuscode>' with "<statusmessage>" for IRD
+    #And Anna IRD number is updated
+#
+    #Examples: Anna get the invite
+      #| Description                 | ird         | partyId  | statuscode | statusmessage                |
+      #| IRD number with dash       | 110-647-514 | 17195916 |        400 | Request message format error |
+      #| Valid ird without dash     |   110647514 | 17195916 |        409 | IRD number already exists    |
+      #| party id does not exist    |   110647514 | 27198907 |        401 | Unauthorized                 |
+      #| Invalid party id           |   110647514 |        0 |        401 | Unauthorized                 |
+      #| Invalid IRD number 6 digit |     8648129 | 17195916 |        400 | Request message format error |
+      #| valid IRD number 9 digit   |   130294901 | 17195916 |        409 | IRD number already exists    |
+      #| Invalid IRD number 8 digit |    11111111 | 17195916 |        400 | Request message format error |
+      #| Invalid IRD number 9 digit |   222222223 | 17195916 |        400 | Request message format error |
+      #| Invalid IRD number 10 digit|   1234567890| 17195916 |        400 | Request message format error |
+      #|Valid IRD number 8digit and 0|   069760538 | 17195916 |        409 | IRD number already exists |
+      #| Valid IRD number 8digit     |   69760538  | 17195916 |        409 | IRD number already exists |
+            

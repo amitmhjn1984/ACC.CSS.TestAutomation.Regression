@@ -1,0 +1,56 @@
+package com.acc.regression.codetable;
+
+import static com.jayway.restassured.RestAssured.given;
+
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+
+import org.json.simple.JSONObject;
+import org.junit.Assert;
+
+import com.acc.regression.InitializeTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.restassured.response.Response;
+
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+
+public class CodeNumber extends InitializeTest{
+	String endpoint=null;
+
+    Response getCodeTableCodeNumberResponse;
+
+    //When 	Anna get the list of code table  "<RequestType>" on "<endpoint>" for "<categoryName>" 
+    @When("^Anna get the list of code table  \"([^\"]*)\" on \"([^\"]*)\" for \"([^\"]*)\" and \"([^\"]*)\"$")
+    public void anna_get_the_list_of_code_table_on_for_and(String requestType, String endpoint, String categoryName, String codeNumber) throws Throwable {
+    	this.endpoint = endpoint+categoryName+"/"+codeNumber;
+    	
+    	getCodeTableCodeNumberResponse = 	given().
+									proxy("webproxy.ds.acc.co.nz", 8080).
+									relaxedHTTPSValidation().
+									urlEncodingEnabled(false).
+									contentType("application/json").
+								when().
+									get(this.endpoint);
+    	
+    	System.out.println("Code Table list- " + getCodeTableCodeNumberResponse.jsonPath().prettyPrint());
+    	if ((getCodeTableCodeNumberResponse.statusCode() != 200)||(getCodeTableCodeNumberResponse.statusCode() == 404) ) {
+        	System.out.println("Status Code--->"+getCodeTableCodeNumberResponse.statusCode());
+        	System.out.println("Status Code--->"+getCodeTableCodeNumberResponse.jsonPath().prettyPrint());
+        }
+
+    }
+
+   
+    @Then("^Anna should see the request returning '(\\d+)' with \"([^\"]*)\" for code number$")
+    public void Anna_should_see_the_request_returning_with_for_code_number(int expectedstatuscode, String expectedStatusMessage) throws Throwable {
+
+        System.out.println("Returned Status code for the request - " + getCodeTableCodeNumberResponse.statusCode());
+        System.out.println("Expected status message - " +expectedStatusMessage);
+        
+        Assert.assertTrue("UserAccount Service is Running fine", 
+                expectedstatuscode == getCodeTableCodeNumberResponse.statusCode());
+       }
+
+}

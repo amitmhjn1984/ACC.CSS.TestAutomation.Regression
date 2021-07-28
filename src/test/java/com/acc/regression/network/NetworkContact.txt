@@ -1,0 +1,167 @@
+package com.acc.regression.network;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
+import com.acc.regression.InitializeTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.jayway.restassured.response.Response;
+
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+import org.junit.Assert;
+
+import static com.jayway.restassured.RestAssured.given;
+import static io.restassured.path.json.JsonPath.from;
+
+
+@SuppressWarnings("unchecked")
+public class NetworkContact extends InitializeTest  {
+	String endpoint=null;
+	
+	JSONArray contact = new JSONArray();
+
+    Response getContactInformationResponse;
+
+    
+    List <String> claimNumber = new ArrayList<String>();
+    List <String> createdBy = new ArrayList<String>();
+    List <String> email = new ArrayList<String>();
+    List <String> name = new ArrayList<String>();
+    List <String> networkId = new ArrayList<String>();
+    List <String> phoneNumber = new ArrayList<String>();
+    private boolean flagPassFail;
+    
+	@Given("^Anna has permision to get all contacts$")
+	public void anna_has_permision_to_get_all_contacts() throws Throwable {
+		this.endpoint = "api/v1/networks";
+	}
+
+	@When("^Anna get network contact information$")
+	public void anna_get_network_contact_information() throws Throwable {
+	
+		     	getContactInformationResponse = 	given().
+								            			relaxedHTTPSValidation().
+								            			urlEncodingEnabled(false).
+								            			contentType("application/json").
+								            		when().
+								            			get(this.endpoint);
+		System.out.println("Get network response--->" + getContactInformationResponse.asString());
+		if ((getContactInformationResponse.statusCode() != 200)
+				|| (getContactInformationResponse.statusCode() == 404)) {
+			System.out.println("Status Code--->" + getContactInformationResponse.statusCode());
+
+		}
+
+	}
+
+	@Then("^Anna should see the request returning \'([^\"]*)\' with \"([^\"]*)\" for network update$")
+	public void Anna_should_see_the_request_returning_with_for_network_update(int expectedstatuscode,
+			String statusmessage) throws Throwable {
+
+		System.out.println("Returned Status code for the request - " + getContactInformationResponse.statusCode());
+
+		Assert.assertTrue("Network update Service is NOT Running fine",
+				expectedstatuscode == getContactInformationResponse.statusCode());
+		if (getContactInformationResponse.statusCode() != 200) {
+			Assert.assertEquals(getContactInformationResponse.jsonPath().get("message"), statusmessage);
+		}
+
+	}
+	
+	@Then("^Anna is able to view all network contact information$")
+	public void anna_is_able_to_view_all_network_contact_information() throws Throwable {
+
+		int passCount = 0;
+		Connection connection = setup();
+		int totalDBCount = 0;
+		Statement selStmt = null;
+		JSONArray networkJsonarray = new JSONArray();
+
+		ResultSet resultSet = null;
+		// int i = 1;
+		try {
+			selStmt = connection.createStatement();
+			resultSet = selStmt.executeQuery("select * from CSS_GENERIC_NETWORK_CONTACT where ACTIVE = 'true'");
+
+			if (resultSet != null) {
+
+				while (resultSet.next()) {
+					totalDBCount = resultSet.getRow();
+					System.out.println("Current Row -->" + totalDBCount);
+					String dbNeworkResult = convert(resultSet);
+					JSONParser parser = new JSONParser();
+					Object obj = parser.parse(dbNeworkResult);
+					networkJsonarray.add(obj);
+				}
+			}
+		} catch (SQLException sql) {
+			System.out.println("Exception while getting total number of network");
+			System.out.print(sql.getMessage());
+			if (resultSet != null) {
+				resultSet.close();
+			}
+			selStmt.close();
+			connection.rollback();
+			System.out.println("Stack: " + sql.getStackTrace().toString());
+		} finally {
+			if (resultSet != null) {
+
+				resultSet.close();
+			}
+			selStmt.close();
+			connection.close();
+		}
+
+		List<String> getContacts = new ArrayList<String>();
+		getContacts = from(getContactInformationResponse.asString()).getList("contacts");
+
+		for (Object getContact : getContacts) {
+			for (Object networkJson : networkJsonarray) {
+				System.out.println("Database value" + networkJson.toString().replaceAll("\"", "").replaceAll(" ", ""));
+				System.out.println("API value" + getContact.toString().replaceAll("=", ":").replaceAll(" ", ""));
+				if (networkJson.toString().replaceAll("\"", "").replaceAll(" ", "")
+						.contains(getContact.toString().replaceAll("=", ":").replaceAll(" ", ""))) {
+					passCount++;
+
+				}
+
+			}
+
+		}
+		
+		Assert.assertEquals(getContactInformationResponse.jsonPath().getList("contacts").size(), passCount);
+		Assert.assertEquals(totalDBCount, passCount);
+	}
+	public String convert(ResultSet rs) throws SQLException {
+	    //ObjectNode node = new ObjectMapper().createObjectNode();
+	    //ArrayNode  nodes = new ObjectMapper().createArrayNode();
+	    JSONObject node = new JSONObject();
+	    JSONArray nodes = new JSONArray();
+	    String userId = null;
+	    String claimNumber = null;
+	    
+	    node.put("name", rs.getString("NAME"));
+	    node.put("email", rs.getString("EMAIL"));
+	    node.put("phoneNumber", rs.getString("PHONE_NUMBER"));
+	    node.put("userId", userId);
+	    node.put("claimNumber", claimNumber);
+	    nodes.add(node);
+	    return nodes.toString(); // this is proper JSON
+	}
+	
+
+}
